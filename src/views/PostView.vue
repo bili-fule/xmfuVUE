@@ -15,6 +15,14 @@ interface Props {
 const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
 const paragraphs = computed(() => post.value?.content.split('\n\n') ?? [])
+
+function isImageCover(cover: string): boolean {
+  return /^https?:\/\//.test(cover) || cover.startsWith('/') || cover.startsWith('data:')
+}
+
+function coverBackground(cover: string): string {
+  return cover || 'linear-gradient(135deg, #262626 0%, #525252 100%)'
+}
 </script>
 
 <template>
@@ -51,6 +59,28 @@ const paragraphs = computed(() => post.value?.content.split('\n\n') ?? [])
             </Badge>
           </div>
         </header>
+
+        <!-- 文章封面：有图显图，渐变作背景，空则省略 -->
+        <div
+          v-if="post.cover"
+          class="h-[32vh] max-h-[420px] min-h-[200px] w-full overflow-hidden rounded-xl md:min-h-[280px]"
+        >
+          <img
+            v-if="isImageCover(post.cover)"
+            :src="post.cover"
+            :alt="post.title"
+            class="h-full w-full object-cover"
+          />
+          <div
+            v-else
+            class="flex h-full w-full items-center justify-center"
+            :style="{ background: coverBackground(post.cover) }"
+          >
+            <span class="text-5xl font-bold text-white/90 drop-shadow md:text-6xl">
+              {{ post.title.slice(0, 1) }}
+            </span>
+          </div>
+        </div>
 
         <Separator />
 

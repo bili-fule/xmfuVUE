@@ -2,24 +2,40 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useWindowSize } from '@vueuse/core'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getAllPosts, formatDate } from '@/data/posts'
+import PostCard from '@/components/PostCard.vue'
+import { getAllPosts, type Post } from '@/data/posts'
 
 const posts = getAllPosts()
 const { width } = useWindowSize()
 
-// 响应式每页卡片数：小屏 1 张、中屏 2 张、大屏 3 张
-const cardsPerPage = computed(() => {
-  if (width.value < 768) return 1
-  if (width.value < 1280) return 2
-  return 3
+interface LayoutConfig {
+  perPage: number
+  topCols: number
+  bottomCols: number
+}
+
+// 响应式两排布局：窄屏 1+1、中屏 2+2、大屏 3+2（3:2≈1.5，接近黄金比）
+const layout = computed<LayoutConfig>(() => {
+  if (width.value < 768) return { perPage: 2, topCols: 1, bottomCols: 1 }
+  if (width.value < 1280) return { perPage: 4, topCols: 2, bottomCols: 2 }
+  return { perPage: 5, topCols: 3, bottomCols: 2 }
+})
+
+const topGridClass = computed(() => {
+  if (layout.value.topCols === 1) return 'grid-cols-1'
+  if (layout.value.topCols === 2) return 'grid-cols-2'
+  return 'grid-cols-3'
+})
+
+const bottomGridClass = computed(() => {
+  if (layout.value.bottomCols === 1) return 'grid-cols-1'
+  if (layout.value.bottomCols === 2) return 'grid-cols-2'
+  return 'grid-cols-3'
 })
 
 const pages = computed(() => {
-  const perPage = cardsPerPage.value
-  const result: typeof posts[] = []
+  const perPage = layout.value.perPage
+  const result: Post[][] = []
   for (let i = 0; i < posts.length; i += perPage) {
     result.push(posts.slice(i, i + perPage))
   }
@@ -117,52 +133,38 @@ onUnmounted(() => {
     >
       <section
         v-for="(page, pageIndex) in pages"
-        :key="`${cardsPerPage}-${pageIndex}`"
-        class="snap-start shrink-0 w-full h-full flex items-stretch px-4 py-2 md:px-8 md:py-3"
+        :key="`${layout.perPage}-${pageIndex}`"
+        class="snap-start shrink-0 w-full h-full flex flex-col items-center justify-center gap-4 px-4 py-2 md:px-8 md:py-3"
       >
+        <!-- 上排：黄金比中较高的主体区（flex 1.618） -->
         <div
-          class="grid w-full h-full gap-4"
-          :class="{
-            'grid-cols-1': cardsPerPage === 1,
-            'grid-cols-2': cardsPerPage === 2,
-            'grid-cols-3': cardsPerPage === 3,
-          }"
+          v-if="page.length > 0"
+          class="flex-[1.618] min-h-0 w-full grid gap-4"
+          :class="topGridClass"
         >
           <RouterLink
-            v-for="post in page"
+            v-for="post in page.slice(0, layout.topCols)"
             :key="post.slug"
             :to="`/post/${post.slug}`"
-            class="group block min-h-0"
+            class="group flex min-h-0"
           >
-            <Card class="h-full flex flex-col transition-all duration-200 hover:border-primary/30 hover:shadow-md">
-              <CardHeader class="gap-3 flex-1 min-h-0 overflow-hidden">
-                <div class="space-y-2">
-                  <CardTitle class="text-lg leading-snug transition-colors group-hover:text-primary md:text-xl">
-                    {{ post.title }}
-                  </CardTitle>
-                  <CardDescription class="line-clamp-2 md:line-clamp-3">
-                    {{ post.excerpt }}
-                  </CardDescription>
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  <Badge v-for="tag in post.tags.slice(0, 3)" :key="tag" variant="secondary" class="text-xs">
-                    {{ tag }}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardFooter class="mt-auto gap-3 text-xs text-muted-foreground md:text-sm">
-                <Avatar class="size-5 md:size-6">
-                  <AvatarImage :src="post.author.avatar" :alt="post.author.name" />
-                  <AvatarFallback>{{ post.author.name.slice(0, 1) }}</AvatarFallback>
-                </Avatar>
-                <span class="font-medium text-foreground">{{ post.author.name }}</span>
-                <span class="ml-auto flex items-center gap-1.5 md:gap-2">
-                  <time :datetime="post.date">{{ formatDate(post.date) }}</time>
-                  <span>·</span>
-                  <span>{{ post.readingTime }} 分钟</span>
-                </span>
-              </CardFooter>
-            </Card>
+            <PostCard :post="post" />
+          </RouterLink>
+        </div>
+
+        <!-- 下排：黄金比中较矮的辅助区（flex 1） -->
+        <div
+          v-if="page.length > layout.topCols"
+          class="flex-1 min-h-0 w-full grid gap-4"
+          :class="bottomGridClass"
+        >
+          <RouterLink
+            v-for="post in page.slice(layout.topCols)"
+            :key="post.slug"
+            :to="`/post/${post.slug}`"
+            class="group flex min-h-0"
+          >
+            <PostCard :post="post" compact />
           </RouterLink>
         </div>
       </section>

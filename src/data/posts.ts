@@ -12,6 +12,7 @@ export interface Post {
   tags: string[]
   author: Author
   readingTime: number
+  cover: string
 }
 
 function createAvatar(initials: string, color: string): string {
@@ -46,6 +47,7 @@ const posts: Post[] = [
     tags: ['Vue 3', '组合式 API', '前端工程化'],
     author: authors.linmo,
     readingTime: 6,
+    cover: 'https://picsum.photos/seed/vue3composition/800/450',
   },
   {
     slug: 'tailwind-v4-upgrade',
@@ -62,6 +64,7 @@ const posts: Post[] = [
     tags: ['Tailwind CSS', 'CSS', '设计系统'],
     author: authors.chenjian,
     readingTime: 5,
+    cover: 'https://picsum.photos/seed/tailwindv4/800/450',
   },
   {
     slug: 'vite-build-performance',
@@ -78,6 +81,7 @@ const posts: Post[] = [
     tags: ['Vite', '构建优化', '工程化'],
     author: authors.linmo,
     readingTime: 7,
+    cover: 'https://picsum.photos/seed/viteperf/800/450',
   },
   {
     slug: 'typescript-advanced-types',
@@ -94,6 +98,7 @@ const posts: Post[] = [
     tags: ['TypeScript', '类型系统', '最佳实践'],
     author: authors.chenjian,
     readingTime: 6,
+    cover: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
   {
     slug: 'shadcn-vue-intro',
@@ -110,6 +115,7 @@ const posts: Post[] = [
     tags: ['shadcn-vue', 'UI 设计', 'Vue'],
     author: authors.linmo,
     readingTime: 5,
+    cover: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
   },
 ]
 
