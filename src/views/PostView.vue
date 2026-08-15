@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, Calendar, Clock, Folder } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import GiscusComment from '@/components/GiscusComment.vue'
 import { getPostBySlug, formatDate } from '@/data/posts'
 
 interface Props {
@@ -14,7 +14,6 @@ interface Props {
 
 const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
-const paragraphs = computed(() => post.value?.content.split('\n\n') ?? [])
 
 function isImageCover(cover: string): boolean {
   return /^https?:\/\//.test(cover) || cover.startsWith('/') || cover.startsWith('data:')
@@ -29,33 +28,39 @@ function coverBackground(cover: string): string {
   <div v-if="post" class="h-full overflow-y-auto">
     <div class="mx-auto max-w-4xl px-4 py-6 md:py-10 space-y-8">
       <Button variant="ghost" size="sm" as-child>
-        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground">
+        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
           <ArrowLeft class="size-4" />
           返回首页
         </RouterLink>
       </Button>
 
       <article class="space-y-8">
-        <header class="space-y-6">
-          <h1 class="text-3xl font-bold leading-tight tracking-tight md:text-4xl lg:text-5xl">
+        <header class="space-y-4">
+          <div v-if="post.category" class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 text-xs font-medium text-primary px-2.5 py-1 rounded-full bg-primary/10">
+              <Folder class="size-3" />
+              {{ post.category }}
+            </span>
+          </div>
+
+          <h1 class="text-3xl font-bold leading-tight tracking-tight md:text-4xl lg:text-5xl text-foreground">
             {{ post.title }}
           </h1>
 
           <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-            <div class="flex items-center gap-2">
-              <Avatar class="size-7">
-                <AvatarImage :src="post.author.avatar" :alt="post.author.name" />
-                <AvatarFallback>{{ post.author.name.slice(0, 1) }}</AvatarFallback>
-              </Avatar>
-              <span class="font-medium text-foreground">{{ post.author.name }}</span>
+            <div class="inline-flex items-center gap-1.5">
+              <Calendar class="size-4 opacity-70" />
+              <time :datetime="post.date">{{ formatDate(post.date) }}</time>
             </div>
-            <time :datetime="post.date">{{ formatDate(post.date) }}</time>
-            <span>{{ post.readingTime }} 分钟阅读</span>
+            <div class="inline-flex items-center gap-1.5">
+              <Clock class="size-4 opacity-70" />
+              <span>{{ post.readingTime }} 分钟阅读</span>
+            </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
-            <Badge v-for="tag in post.tags" :key="tag" variant="secondary">
-              {{ tag }}
+          <div v-if="post.tags && post.tags.length > 0" class="flex flex-wrap gap-2 pt-1">
+            <Badge v-for="tag in post.tags" :key="tag" variant="secondary" class="font-normal">
+              # {{ tag }}
             </Badge>
           </div>
         </header>
@@ -63,7 +68,7 @@ function coverBackground(cover: string): string {
         <!-- 文章封面：有图显图，渐变作背景，空则省略 -->
         <div
           v-if="post.cover"
-          class="h-[32vh] max-h-[420px] min-h-[200px] w-full overflow-hidden rounded-xl md:min-h-[280px]"
+          class="h-[32vh] max-h-[420px] min-h-[200px] w-full overflow-hidden rounded-xl md:min-h-[280px] border border-border/50 shadow-sm"
         >
           <img
             v-if="isImageCover(post.cover)"
@@ -84,28 +89,34 @@ function coverBackground(cover: string): string {
 
         <Separator />
 
-        <div class="mx-auto max-w-3xl space-y-6">
-          <p
-            v-for="(paragraph, index) in paragraphs"
-            :key="index"
-            class="text-lg leading-relaxed text-foreground"
-          >
-            {{ paragraph }}
-          </p>
-        </div>
+        <!-- Markdown 编译后内容 -->
+        <div
+          class="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-pre:bg-muted/80 prose-pre:text-foreground leading-relaxed"
+          v-html="post.contentHtml"
+        />
       </article>
 
-      <Button variant="ghost" size="sm" as-child>
-        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground">
-          <ArrowLeft class="size-4" />
-          返回首页
-        </RouterLink>
-      </Button>
+      <Separator />
+
+      <!-- 底部评论区 -->
+      <section class="space-y-4 pt-4">
+        <h2 class="text-xl font-semibold tracking-tight text-foreground">评论交流</h2>
+        <GiscusComment />
+      </section>
+
+      <div class="pt-2">
+        <Button variant="ghost" size="sm" as-child>
+          <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+            <ArrowLeft class="size-4" />
+            返回首页
+          </RouterLink>
+        </Button>
+      </div>
     </div>
   </div>
 
   <div v-else class="h-full overflow-y-auto">
-    <div class="mx-auto max-w-4xl px-4 py-6 md:py-10 space-y-6 text-center">
+    <div class="mx-auto max-w-4xl px-4 py-16 md:py-24 space-y-6 text-center">
       <div class="space-y-2">
         <h1 class="text-2xl font-bold">文章不存在</h1>
         <p class="text-muted-foreground">你访问的链接可能已经失效，或者文章已被移除。</p>
