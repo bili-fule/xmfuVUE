@@ -128,3 +128,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 代码高亮与 Markdown 代码块优化 */
+.prose pre {
+  @apply bg-[#0d1117] text-[#e6edf3] border border-border/50 rounded-xl p-4 overflow-x-auto;
+}
+
+.prose pre code {
+  @apply font-mono text-sm bg-transparent p-0 border-none text-inherit;
+}
+
+.prose :not(pre) > code {
+  @apply font-mono text-[0.875em] bg-muted px-1.5 py-0.5 rounded text-foreground font-normal border border-border/40;
+}
+

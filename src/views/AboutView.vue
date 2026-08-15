@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ExternalLink, Github, Tv, Heart, ShieldCheck, Sparkles, Terminal } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { ExternalLink, Github, Tv, ShieldCheck, Sparkles, Terminal } from 'lucide-vue-next'
+import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { siteConfig } from '@/data/site'
+import { t } from '@/i18n'
 
 const { author, site, license } = siteConfig
 </script>
@@ -26,11 +27,11 @@ const { author, site, license } = siteConfig
                 <h1 class="text-3xl font-bold tracking-tight text-foreground">{{ author.name }}</h1>
                 <Badge variant="outline" class="border-primary/40 text-primary">
                   <Sparkles class="size-3 mr-1" />
-                  Frontend & Network
+                  {{ t('about.role') || 'Frontend & Network' }}
                 </Badge>
               </div>
               <p class="text-sm font-medium text-muted-foreground">
-                {{ site.title }} · 个人技术记录
+                {{ site.title }} · {{ t('about.siteSubtitle') || '个人技术记录' }}
               </p>
             </div>
 
@@ -63,32 +64,29 @@ const { author, site, license } = siteConfig
       <section class="space-y-4">
         <h2 class="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <Terminal class="size-5 text-primary" />
-          关于本站
+          {{ t('about.techTitle') || '关于本站' }}
         </h2>
         <Card>
           <CardContent class="p-6 space-y-4 text-foreground/90 leading-relaxed">
             <p>
-              欢迎来到这里！{{ site.description }}
-            </p>
-            <p>
-              这里是我在技术道路上的自留地。主要记录：
+              {{ site.description }}
             </p>
             <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground pt-1">
               <li class="flex items-center gap-2 bg-muted/40 p-2.5 rounded-md">
                 <span class="size-2 rounded-full bg-primary" />
-                <span>前端开发架构、Vue3/Vite/TypeScript 实践</span>
+                <span>{{ t('about.tech.1') || '前端开发架构、Vue3/Vite/TypeScript 实践' }}</span>
               </li>
               <li class="flex items-center gap-2 bg-muted/40 p-2.5 rounded-md">
                 <span class="size-2 rounded-full bg-primary" />
-                <span>计算机网络协议、代理路由与网络调优</span>
+                <span>{{ t('about.tech.2') || '计算机网络协议、代理路由与网络调优' }}</span>
               </li>
               <li class="flex items-center gap-2 bg-muted/40 p-2.5 rounded-md">
                 <span class="size-2 rounded-full bg-primary" />
-                <span>Linux 服务器运维、Docker 容器化与部署</span>
+                <span>{{ t('about.tech.3') || 'Linux 服务器运维、Docker 容器化与部署' }}</span>
               </li>
               <li class="flex items-center gap-2 bg-muted/40 p-2.5 rounded-md">
                 <span class="size-2 rounded-full bg-primary" />
-                <span>日常生活中的所思所想与踩坑心得</span>
+                <span>{{ t('about.tech.4') || '日常生活中的所思所想与踩坑心得' }}</span>
               </li>
             </ul>
           </CardContent>
@@ -99,25 +97,24 @@ const { author, site, license } = siteConfig
       <section class="space-y-4">
         <h2 class="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <ShieldCheck class="size-5 text-primary" />
-          版权与许可
+          {{ t('about.licenseTitle') || '版权与许可' }}
         </h2>
         <Card>
           <CardContent class="p-6 space-y-3">
             <p class="text-sm text-foreground/90 leading-relaxed">
-              本站所有原创内容在无特别声明的情况下，均采用
+              {{ t('about.licenseDesc') || '本站所有原创内容在无特别声明的情况下，均采用' }}
               <a
                 :href="license.url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                class="font-medium text-primary hover:underline inline-flex items-center gap-1 ml-1"
               >
                 {{ license.name }}
                 <ExternalLink class="size-3" />
               </a>
-              许可协议进行许可。
             </p>
             <p class="text-xs text-muted-foreground">
-              转载请注明出处，署名原作者，且不得用于商业用途，衍生作品需以相同许可共享。
+              {{ t('about.licenseNote') || '转载请注明出处，署名原作者，且不得用于商业用途，衍生作品需以相同许可共享。' }}
             </p>
           </CardContent>
         </Card>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Calendar, Tag, FileText, ArrowRight } from 'lucide-vue-next'
+import { Calendar, FileText, ArrowRight } from 'lucide-vue-next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getAllPosts, formatDate, type Post } from '@/data/posts'
+import { t } from '@/i18n'
 
 const posts = getAllPosts()
 
@@ -41,23 +42,23 @@ const totalPosts = computed(() => posts.length)
       <!-- 页面头部 -->
       <div class="space-y-2 border-b pb-6">
         <h1 class="text-3xl font-bold tracking-tight md:text-4xl text-foreground">
-          文章归档
+          {{ t('archive.title') }}
         </h1>
         <p class="text-sm text-muted-foreground md:text-base flex items-center gap-2">
           <FileText class="size-4 text-primary" />
-          <span>共收录 {{ totalPosts }} 篇文章，岁月留痕，温故知新。</span>
+          <span>{{ t('archive.description') || `共收录 ${totalPosts} 篇文章` }}</span>
         </p>
       </div>
 
       <!-- 时间轴列表 -->
-      <div class="space-y-10">
+      <div v-if="yearGroups.length > 0" class="space-y-10">
         <section v-for="group in yearGroups" :key="group.year" class="space-y-4">
           <div class="flex items-center gap-3">
             <h2 class="text-2xl font-bold tracking-tight text-foreground font-mono">
               {{ group.year }}
             </h2>
             <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              {{ group.posts.length }} 篇
+              {{ group.posts.length }}
             </span>
           </div>
 
@@ -104,6 +105,11 @@ const totalPosts = computed(() => posts.length)
             </RouterLink>
           </div>
         </section>
+      </div>
+
+      <!-- 空列表提示 -->
+      <div v-else class="py-16 text-center text-muted-foreground">
+        <p>{{ t('archive.empty') }}</p>
       </div>
     </div>
   </div>

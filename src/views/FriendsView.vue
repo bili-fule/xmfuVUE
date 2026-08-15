@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ExternalLink, Users, PlusCircle, Sparkles } from 'lucide-vue-next'
+import { ExternalLink, Users, PlusCircle } from 'lucide-vue-next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { siteConfig } from '@/data/site'
+import { t } from '@/i18n'
 
 const { friends, site, author } = siteConfig
 </script>
@@ -15,15 +16,15 @@ const { friends, site, author } = siteConfig
       <div class="space-y-2 border-b pb-6">
         <div class="flex items-center gap-2">
           <h1 class="text-3xl font-bold tracking-tight md:text-4xl text-foreground">
-            友情链接
+            {{ t('friends.title') }}
           </h1>
           <Badge variant="secondary" class="font-normal text-xs">
             <Users class="size-3 mr-1" />
-            {{ friends.length }} 位伙伴
+            {{ friends.length }}
           </Badge>
         </div>
         <p class="text-sm text-muted-foreground md:text-base">
-          海内存知己，天涯若比邻。这里收录了志同道合的朋友们。
+          {{ t('friends.description') }}
         </p>
       </div>
 
@@ -63,30 +64,34 @@ const { friends, site, author } = siteConfig
       <section class="space-y-4 pt-4">
         <h2 class="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <PlusCircle class="size-5 text-primary" />
-          友链申请
+          {{ t('friends.applyTitle') }}
         </h2>
         <Card class="bg-muted/30 border-dashed">
           <CardHeader>
-            <CardTitle class="text-base">欢迎互换友链</CardTitle>
+            <CardTitle class="text-base">{{ t('friends.formatTitle') || t('friends.applyTitle') }}</CardTitle>
             <CardDescription>
-              如果你也拥有自己的独立博客或网站，欢迎按以下格式在下方评论区或通过社交平台联系我。
+              {{ t('friends.formatHint') || '欢迎互换友链，请按以下格式留言或联系我。' }}
             </CardDescription>
           </CardHeader>
           <CardContent class="space-y-4 text-sm">
             <div class="space-y-2">
-              <h4 class="font-medium text-foreground text-xs uppercase tracking-wider">本站信息</h4>
-              <pre class="p-4 rounded-lg bg-muted text-xs font-mono text-foreground/90 overflow-x-auto border border-border/50"><code>名称：{{ site.title }}
-简介：{{ site.description }}
-链接：https://blog.fulie.me (或您的当前域名)
-头像：{{ author.avatar }}</code></pre>
+              <h4 class="font-medium text-foreground text-xs uppercase tracking-wider">
+                {{ t('friends.formatTitle') || '本站信息' }}
+              </h4>
+              <pre class="p-4 rounded-lg bg-muted text-xs font-mono text-foreground/90 overflow-x-auto border border-border/50"><code>name: {{ site.title }}
+desc: {{ site.description }}
+link: https://blog.fulie.me
+avatar: {{ author.avatar }}</code></pre>
             </div>
 
             <div class="space-y-2">
-              <h4 class="font-medium text-foreground text-xs uppercase tracking-wider">申请要求</h4>
+              <h4 class="font-medium text-foreground text-xs uppercase tracking-wider">
+                {{ t('friends.requirementsTitle') || '申请要求' }}
+              </h4>
               <ul class="list-disc list-inside space-y-1 text-xs text-muted-foreground">
-                <li>网站支持 HTTPS 访问，内容积极健康，无违规广告及推广</li>
-                <li>原创技术或生活分享类独立博客优先</li>
-                <li>申请前请先添加本站链接~</li>
+                <li>{{ t('friends.requirements.1') || '网站支持 HTTPS 访问，内容积极健康，无违规广告及推广' }}</li>
+                <li>{{ t('friends.requirements.2') || '原创技术或生活分享类独立博客优先' }}</li>
+                <li>{{ t('friends.requirements.3') || '申请前请先添加本站链接~' }}</li>
               </ul>
             </div>
           </CardContent>

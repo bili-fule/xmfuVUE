@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import PostView from '@/views/PostView.vue'
+import { getPostBySlug } from '@/data/posts'
+import { applyPostMeta, applyDefaultMeta } from '@/lib/seo'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -36,6 +38,15 @@ const router = createRouter({
       redirect: '/',
     },
   ],
+})
+
+router.afterEach((to) => {
+  if (to.name === 'post' && typeof to.params.slug === 'string') {
+    const post = getPostBySlug(to.params.slug)
+    applyPostMeta(post ? { title: post.title, excerpt: post.excerpt, slug: post.slug } : null)
+  } else {
+    applyDefaultMeta()
+  }
 })
 
 export { router }

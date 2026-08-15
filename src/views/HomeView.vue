@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useWindowSize } from '@vueuse/core'
+import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
 import { getAllPosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
@@ -57,6 +58,7 @@ function getPageRows(pageLength: number, cols: number): number {
 
 const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
+const jumpInput = ref('')
 
 function scrollToIndex(index: number) {
   if (!trackRef.value) return
@@ -64,6 +66,27 @@ function scrollToIndex(index: number) {
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
   currentPage.value = target
   trackRef.value.scrollTo({ left: pageWidth * target, behavior: 'smooth' })
+}
+
+function handlePrev() {
+  if (currentPage.value > 0) {
+    scrollToIndex(currentPage.value - 1)
+  }
+}
+
+function handleNext() {
+  if (currentPage.value < pages.value.length - 1) {
+    scrollToIndex(currentPage.value + 1)
+  }
+}
+
+function handleDirectJump() {
+  const pageNum = parseInt(jumpInput.value, 10)
+  if (!isNaN(pageNum)) {
+    const target = Math.max(1, Math.min(pageNum, pages.value.length)) - 1
+    scrollToIndex(target)
+  }
+  jumpInput.value = ''
 }
 
 // wheel 节流：一次手势只翻一页
@@ -182,26 +205,89 @@ onUnmounted(() => {
       </section>
     </div>
 
-    <!-- 底部分页条 -->
+    <!-- 底部分页条：页码数字按钮 + 前后步进 + 快速跳转输入框 -->
     <nav
       v-if="pages.length > 1"
-      class="shrink-0 flex items-center justify-center gap-2 py-3 md:py-4"
-      aria-label="分页"
+      class="shrink-0 flex items-center justify-center gap-1.5 sm:gap-2.5 py-2.5 sm:py-3 px-4 select-none"
+      aria-label="分页导航"
     >
+      <!-- 上一页 -->
       <button
-        v-for="(_, index) in pages"
-        :key="index"
         type="button"
-        class="h-2 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        :class="
-          index === currentPage
-            ? 'w-8 bg-primary'
-            : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60'
-        "
-        :aria-label="`跳到第 ${index + 1} 页`"
-        :aria-current="index === currentPage ? 'page' : undefined"
-        @click="scrollToIndex(index)"
-      />
+        class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md border border-border bg-card text-foreground transition-all hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer shadow-xs"
+        :disabled="currentPage === 0"
+        aria-label="上一页"
+        @click="handlePrev"
+      >
+        <ChevronLeft class="size-3.5 sm:size-4" />
+      </button>
+
+      <!-- 中/宽屏：数字按钮列表 -->
+      <div class="hidden sm:flex items-center gap-1">
+        <button
+          v-for="(_, index) in pages"
+          :key="index"
+          type="button"
+          class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md text-xs sm:text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+          :class="[
+            index === currentPage
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+          ]"
+          :aria-label="`第 ${index + 1} 页`"
+          :aria-current="index === currentPage ? 'page' : undefined"
+          @click="scrollToIndex(index)"
+        >
+          {{ index + 1 }}
+        </button>
+      </div>
+
+      <!-- 窄屏：紧凑当前页/总页显示 -->
+      <div class="flex sm:hidden items-center px-2 py-1 rounded-md border border-border bg-card text-xs font-medium font-mono text-foreground shadow-xs">
+        <span class="text-primary font-semibold">{{ currentPage + 1 }}</span>
+        <span class="mx-1 text-muted-foreground/60">/</span>
+        <span class="text-muted-foreground">{{ pages.length }}</span>
+      </div>
+
+      <!-- 下一页 -->
+      <button
+        type="button"
+        class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md border border-border bg-card text-foreground transition-all hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer shadow-xs"
+        :disabled="currentPage === pages.length - 1"
+        aria-label="下一页"
+        @click="handleNext"
+      >
+        <ChevronRight class="size-3.5 sm:size-4" />
+      </button>
+
+      <!-- 分隔线 -->
+      <div class="h-4 w-[1px] bg-border mx-0.5" />
+
+      <!-- 直接跳转输入框 -->
+      <form
+        class="flex items-center gap-1"
+        @submit.prevent="handleDirectJump"
+      >
+        <div class="relative flex items-center">
+          <input
+            v-model="jumpInput"
+            type="number"
+            min="1"
+            :max="pages.length"
+            :placeholder="`${currentPage + 1}`"
+            class="h-7 sm:h-8 w-11 sm:w-14 rounded-md border border-border bg-card px-1.5 sm:px-2 text-center text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-xs"
+            aria-label="跳转到指定页"
+          />
+        </div>
+        <button
+          type="submit"
+          class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shadow-xs"
+          title="跳转"
+          aria-label="确认跳转"
+        >
+          <CornerDownLeft class="size-3 sm:size-3.5" />
+        </button>
+      </form>
     </nav>
   </div>
 </template>

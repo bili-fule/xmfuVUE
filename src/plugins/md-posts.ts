@@ -2,16 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
 import MarkdownIt from 'markdown-it'
+import anchor from 'markdown-it-anchor'
 import hljs from 'highlight.js'
 import type { Plugin } from 'vite'
+import { SITE } from '../lib/site'
 
-// ===== 站点常量（可按需修改）=====
-const SITE = {
-  title: 'fulieblog',
-  description: '这是孚狸的博客，分享关于前端开发、网络技术、服务器部署和生活感悟的见解',
-  // 域名占位，用户可改
-  baseUrl: 'https://blog.xmfu.cn/',
-}
+export { SITE }
 
 export interface Post {
   slug: string
@@ -40,11 +36,43 @@ function highlightCode(str: string, lang: string): string {
   return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
 }
 
+/** 标题 slug（保留中文，其余非字母数字转 '-'） */
+function slugifyHeading(str: string): string {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   highlight: highlightCode,
 })
+
+// 标题带 id（slug 式），供 TOC 锚点跳转
+md.use(anchor, {
+  level: [1, 2, 3, 4],
+  slugify: slugifyHeading,
+})
+
+/** HTML 去标签得到纯文本（用于搜索索引） */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 /** 计算阅读时长：中文字符约 400 字/分钟，英文单词约 200 词/分钟，最小 1 */
 function calcReadingTime(content: string): number {
@@ -117,6 +145,35 @@ function virtualModuleCode(posts: Post[]): string {
   return `export const posts = ${JSON.stringify(posts)}`
 }
 
+export interface SearchIndexEntry {
+  slug: string
+  title: string
+  excerpt: string
+  tags: string[]
+  text: string
+}
+
+/** 非草稿文章生成搜索索引条目 */
+function buildSearchIndex(posts: Post[]): SearchIndexEntry[] {
+  return posts
+    .filter((p) => !p.draft)
+    .map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      excerpt: p.excerpt,
+      tags: p.tags,
+      text: htmlToText(p.contentHtml),
+    }))
+}
+
+/** 写入 public/search-index.json（构建产物，供 /search-index.json 静态访问） */
+function writeSearchIndex(postsDir: string, publicDir: string): void {
+  const posts = loadPosts(postsDir)
+  const entries = buildSearchIndex(posts)
+  fs.mkdirSync(publicDir, { recursive: true })
+  fs.writeFileSync(path.join(publicDir, 'search-index.json'), JSON.stringify(entries, null, 2), 'utf-8')
+}
+
 function escapeXml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -182,6 +239,7 @@ Sitemap: ${base}/sitemap.xml
 
 export function mdPosts(): Plugin {
   let postsDir = ''
+  let publicDir = ''
 
   return {
     name: 'md-posts',
@@ -189,6 +247,14 @@ export function mdPosts(): Plugin {
 
     configResolved(config) {
       postsDir = path.resolve(config.root, 'src/content/posts')
+      publicDir = config.publicDir
+    },
+
+    buildStart() {
+      // 构建/启动时生成搜索索引（dev 下也会触发，供 /search-index.json 访问）
+      if (publicDir) {
+        writeSearchIndex(postsDir, publicDir)
+      }
     },
 
     resolveId(id) {
@@ -207,6 +273,10 @@ export function mdPosts(): Plugin {
     handleHotUpdate(ctx) {
       // dev 下监听 md 目录变更，失效 virtual:posts 模块并触发其依赖更新
       if (ctx.file.startsWith(postsDir) && ctx.file.endsWith('.md')) {
+        // 同时重写搜索索引
+        if (publicDir) {
+          writeSearchIndex(postsDir, publicDir)
+        }
         const mod = ctx.server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID)
         if (mod) {
           ctx.server.moduleGraph.invalidateModule(mod)
