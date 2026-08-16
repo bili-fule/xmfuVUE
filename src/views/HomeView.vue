@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
 import { getAllPosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
 
 const posts = getAllPosts()
 const { width } = useWindowSize()
@@ -59,6 +61,7 @@ function getPageRows(pageLength: number, cols: number): number {
 const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
 const jumpInput = ref('')
+let lenis: Lenis | null = null
 
 function scrollToIndex(index: number) {
   if (!trackRef.value) return
@@ -142,10 +145,24 @@ watch(width, () => {
 
 onMounted(() => {
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
+  // Lenis 平滑滚动（最小侵入：仅接管触摸惯性，滚轮/吸附逻辑保持原样）
+  if (trackRef.value) {
+    lenis = new Lenis({
+      wrapper: trackRef.value,
+      content: trackRef.value,
+      orientation: 'horizontal',
+      gestureOrientation: 'both',
+      autoRaf: true,
+      smoothWheel: false,
+      syncTouch: true,
+    })
+  }
 })
 
 onUnmounted(() => {
   trackRef.value?.removeEventListener('wheel', onWheel)
+  lenis?.destroy()
+  lenis = null
 })
 </script>
 
