@@ -4,7 +4,7 @@ import matter from 'gray-matter'
 import MarkdownIt from 'markdown-it'
 import anchor from 'markdown-it-anchor'
 import hljs from 'highlight.js'
-import type { Plugin } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
 import { SITE } from '../lib/site'
 
 export { SITE }
@@ -145,6 +145,19 @@ function virtualModuleCode(posts: Post[]): string {
   return `export const posts = ${JSON.stringify(posts)}`
 }
 
+/**
+ * dev 下失效 virtual:posts 模块并触发全页 reload。
+ * 文章列表是全局数据（首页、归档、搜索、RSS 都依赖），HMR 局部更新容易状态错位，
+ * 全 reload 最可靠。供 configureServer 的 watcher 兜底调用。
+ */
+function invalidatePostsModule(server: ViteDevServer): void {
+  const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID)
+  if (mod) {
+    server.moduleGraph.invalidateModule(mod)
+  }
+  server.ws.send({ type: 'full-reload' })
+}
+
 export interface SearchIndexEntry {
   slug: string
   title: string
@@ -283,6 +296,26 @@ export function mdPosts(): Plugin {
           return [...mod.importers]
         }
       }
+    },
+
+    configureServer(server) {
+      // 兜底：显式监听 md 目录的 add/unlink（新建/删除文件）。
+      // Vite 默认 watcher 对「新建文件」的捕获不稳定——handleHotUpdate 依赖 Vite
+      // 已识别该文件才会触发，而新建 .md 首次出现时未必进入 watcher 视野，导致新增文章
+      // 不热更新（必须重启 dev）。这里用 chokidar 的 add/unlink 兜底，任何 md 增删都
+      // 失效 virtual:posts 并广播 HMR，实现和 Fuwari 一样的「加文章即见」体验。
+      // 改动时勿删此块，否则「新增文章不热更新」bug 反弹。
+      const onPostsChange = (file: string) => {
+        if (file.startsWith(postsDir) && file.endsWith('.md')) {
+          if (publicDir) {
+            writeSearchIndex(postsDir, publicDir)
+          }
+          invalidatePostsModule(server)
+        }
+      }
+      server.watcher.on('add', onPostsChange)
+      server.watcher.on('unlink', onPostsChange)
+      // change 走 handleHotUpdate 即可，这里不重复
     },
 
     generateBundle() {

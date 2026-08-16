@@ -45,7 +45,7 @@ const messages: Record<Locale, MessageDict> = {
     'about.licenseTitle': '版权与许可',
     'about.licenseDesc': '本站所有原创内容在无特别声明的情况下，均采用',
     'about.licenseNote': '转载请注明出处，署名原作者，且不得用于商业用途',
-    'footer.copyright': '版权',
+    'footer.copyright': 'Copyright',
     'footer.backToTop': '回到顶部',
   },
   en: {

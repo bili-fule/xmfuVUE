@@ -172,21 +172,21 @@ onUnmounted(() => {
         :key="`${layout.perPage}-${pageIndex}`"
         class="snap-start shrink-0 w-full h-full flex flex-col justify-start"
       >
-        <!-- 内部居中限宽容器 -->
+        <!-- 内部居中限宽容器：justify-start 让 Grid 靠上，留白总是在下方 -->
         <div class="mx-auto w-full max-w-7xl h-full flex flex-col justify-start px-4 py-2 md:px-8 md:py-3">
-          <!-- 
-            统一等高 Grid 容器：
-            - 双行页（6/4/2 张满页）：grid-rows-2 + h-full 撑满整页高度，紧凑填满
-            - 单行页（末页余数）：grid-rows-1 自然高度，不纵向拉伸，由外层 justify-center 垂直居中留白
+          <!--
+            Grid 行高与卡片尺寸策略（修复「末页卡片占两排位置 / 大小不一致」bug）：
+            - 统一 grid-rows-2 + h-full：所有页（满页和末页）的 Grid 行高一致 = 半页高。
+              末页内容少时只填前几行，剩余行空置 → 卡片靠上、留白在下，且卡片高度恒为半页。
+              勿对末页改用 grid-rows-1：那样末页卡片会变成非 compact 大尺寸（封面 min-h-32），
+              与满页 compact 卡片（半页高）大小不一致，视觉上「末页卡片占两排位置」。
+            - 统一 compact：末页卡片也用 compact 尺寸（与满页一致），勿基于 getPageRows 切换，
+              否则末页单行会退回非 compact 大卡片，破坏尺寸一致性。
+            改动时务必保持「所有页统一 grid-rows-2 h-full + compact」，否则 bug 反弹。
           -->
           <div
-            class="grid w-full gap-4 transition-all duration-300"
-            :class="[
-              gridColsClass,
-              getPageRows(page.length, layout.cols) === 1
-                ? 'grid-rows-1'
-                : 'grid-rows-2 h-full'
-            ]"
+            class="grid w-full gap-4 transition-all duration-300 grid-rows-2 h-full"
+            :class="[gridColsClass]"
           >
             <RouterLink
               v-for="post in page"
@@ -196,7 +196,7 @@ onUnmounted(() => {
             >
               <PostCard
                 :post="post"
-                :compact="getPageRows(page.length, layout.cols) > 1"
+                compact
                 class="w-full"
               />
             </RouterLink>
