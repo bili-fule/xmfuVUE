@@ -3,6 +3,9 @@
   "include": ["vite.config.*", "src/plugins/**/*.ts", "src/lib/site.ts"],
   "compilerOptions": {
     "composite": true,
-    "types": ["node"]
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   }
 }
