@@ -10,7 +10,7 @@ const { friends, site, author } = siteConfig
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto">
+  <div class="h-full overflow-y-auto overflow-x-clip">
     <div class="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-10">
       <!-- 头部介绍 -->
       <div class="space-y-2 border-b pb-6">
@@ -36,9 +36,9 @@ const { friends, site, author } = siteConfig
           :href="friend.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="group block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+          class="group block h-full min-w-0 max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
         >
-          <Card class="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-1 bg-card/90">
+          <Card class="h-full w-full max-w-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:-translate-y-1 bg-card/90">
             <CardContent class="p-5 flex items-start gap-4">
               <Avatar class="size-12 shrink-0 border border-border shadow-sm transition-transform duration-300 group-hover:scale-105">
                 <AvatarImage :src="friend.avatar" :alt="friend.name" />

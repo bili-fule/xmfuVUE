@@ -37,7 +37,7 @@ const totalPosts = computed(() => posts.length)
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto">
+  <div class="h-full overflow-y-auto overflow-x-clip">
     <div class="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-8">
       <!-- 页面头部 -->
       <div class="space-y-2 border-b pb-6">
@@ -62,31 +62,35 @@ const totalPosts = computed(() => posts.length)
             </span>
           </div>
 
-          <div class="grid gap-3">
+          <div class="grid grid-cols-1 gap-3">
             <RouterLink
               v-for="post in group.posts"
               :key="post.slug"
               :to="`/post/${post.slug}`"
-              class="group block"
+              class="group block min-w-0 max-w-full"
             >
-              <Card class="transition-all duration-200 hover:border-primary/50 hover:shadow-md hover:bg-muted/40">
-                <CardContent class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <Card class="w-full max-w-full transition-all duration-200 hover:border-primary/50 hover:shadow-md hover:bg-muted/40">
+                <CardContent class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
                   <div class="space-y-1.5 min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-2 min-w-0">
                       <span v-if="post.category" class="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-medium">
                         {{ post.category }}
                       </span>
-                      <h3 class="font-medium text-base text-foreground group-hover:text-primary transition-colors truncate">
+                      <h3 class="font-medium text-base text-foreground group-hover:text-primary transition-colors min-w-0 truncate">
                         {{ post.title }}
                       </h3>
                     </div>
 
-                    <div v-if="post.tags && post.tags.length > 0" class="flex flex-wrap gap-1.5 pt-0.5">
+                    <p v-if="post.excerpt" class="line-clamp-2 text-sm text-muted-foreground">
+                      {{ post.excerpt }}
+                    </p>
+
+                    <div v-if="post.tags && post.tags.length > 0" class="flex flex-wrap gap-1.5 pt-0.5 min-w-0">
                       <Badge
                         v-for="tag in post.tags"
                         :key="tag"
                         variant="secondary"
-                        class="text-[11px] font-normal text-muted-foreground"
+                        class="max-w-full text-[11px] font-normal text-muted-foreground"
                       >
                         #{{ tag }}
                       </Badge>

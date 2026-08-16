@@ -192,7 +192,7 @@ onUnmounted(() => {
               v-for="post in page"
               :key="post.slug"
               :to="`/post/${post.slug}`"
-              class="group flex min-h-0 col-span-1"
+              class="group flex min-h-0 col-span-1 min-w-0 max-w-full"
             >
               <PostCard
                 :post="post"
