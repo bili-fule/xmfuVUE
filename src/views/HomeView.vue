@@ -6,9 +6,6 @@ import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
 import { getAllPosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
-import Lenis from 'lenis'
-import Snap from 'lenis/snap'
-import 'lenis/dist/lenis.css'
 
 const posts = getAllPosts()
 const { width } = useWindowSize()
@@ -62,21 +59,13 @@ function getPageRows(pageLength: number, cols: number): number {
 const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
 const jumpInput = ref('')
-const sectionRefs = ref<HTMLElement[]>([])
-let lenis: Lenis | null = null
-let snap: Snap | null = null
 
 function scrollToIndex(index: number) {
   if (!trackRef.value) return
   const pageWidth = trackRef.value.clientWidth
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
   currentPage.value = target
-  const left = pageWidth * target
-  if (lenis) {
-    lenis.scrollTo(left, { force: true })
-  } else {
-    trackRef.value.scrollTo({ left, behavior: 'smooth' })
-  }
+  trackRef.value.scrollTo({ left: pageWidth * target, behavior: 'smooth' })
 }
 
 function handlePrev() {
@@ -147,54 +136,16 @@ watch(width, () => {
     const pageWidth = trackRef.value.clientWidth
     const nearestPage = Math.round(trackRef.value.scrollLeft / pageWidth)
     currentPage.value = Math.max(0, Math.min(nearestPage, pages.value.length - 1))
-    registerSnapElements()
     scrollToIndex(currentPage.value)
   })
 })
 
-// 注册 / 重注册 lenis/snap 的吸附点（sections）。布局变化（宽度/分页）后需重建。
-let removeSnapElements: (() => void) | null = null
-function registerSnapElements() {
-  if (!lenis || !snap) return
-  removeSnapElements?.()
-  removeSnapElements = snap.addElements(sectionRefs.value.filter(Boolean), { align: 'center' })
-}
-
 onMounted(() => {
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
-  // Lenis 平滑滚动（横向）。不用 CSS scroll-snap（与 Lenis lerp 冲突导致瞬移），
-  // 改用官方 lenis/snap 插件 type: 'lock'（每次手势只翻一页，带动画吸附）。
-  if (trackRef.value) {
-    lenis = new Lenis({
-      wrapper: trackRef.value,
-      content: trackRef.value,
-      orientation: 'horizontal',
-      gestureOrientation: 'both',
-      autoRaf: true,
-      smoothWheel: false,
-      syncTouch: true,
-    })
-    snap = new Snap(lenis, {
-      type: 'lock',
-      distanceThreshold: '50%',
-      duration: 0.6,
-      debounce: 0,
-      onSnapComplete: ({ index }) => {
-        if (typeof index === 'number') {
-          currentPage.value = Math.max(0, Math.min(index, pages.value.length - 1))
-        }
-      },
-    })
-    registerSnapElements()
-  }
 })
 
 onUnmounted(() => {
   trackRef.value?.removeEventListener('wheel', onWheel)
-  snap?.destroy()
-  snap = null
-  lenis?.destroy()
-  lenis = null
 })
 </script>
 
@@ -213,14 +164,13 @@ onUnmounted(() => {
     <!-- 横向翻页轨道：section 满宽，确保每次 snap 和 clientWidth 滚动完全等宽对齐 -->
     <div
       ref="trackRef"
-      class="flex flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide"
+      class="flex flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth scrollbar-hide"
       @scroll="onScroll"
     >
       <section
         v-for="(page, pageIndex) in pages"
         :key="`${layout.perPage}-${pageIndex}`"
-        :ref="(el) => { if (el) sectionRefs[pageIndex] = el as HTMLElement }"
-        class="shrink-0 w-full h-full flex flex-col justify-start"
+        class="snap-start shrink-0 w-full h-full flex flex-col justify-start"
       >
         <!-- 内部居中限宽容器：justify-start 让 Grid 靠上，留白总是在下方 -->
         <div class="mx-auto w-full max-w-7xl h-full flex flex-col justify-start px-4 py-2 md:px-8 md:py-3">
