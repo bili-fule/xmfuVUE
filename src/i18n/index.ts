@@ -94,6 +94,8 @@ const messages: Record<Locale, MessageDict> = {
 const DEFAULT_LOCALE: Locale = 'zh'
 
 function readInitialLocale(): Locale {
+  // SSR 无 localStorage，显式返回默认语言（避免依赖 try/catch 捕获 ReferenceError）
+  if (typeof localStorage === 'undefined') return DEFAULT_LOCALE
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     return stored === 'en' ? 'en' : DEFAULT_LOCALE

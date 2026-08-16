@@ -58,6 +58,9 @@ function extractToc() {
     return
   }
 
+  // SSR 无 DOMParser；TOC 在客户端挂载后由 watch/onMounted 重新触发提取
+  if (typeof DOMParser === 'undefined') return
+
   const parser = new DOMParser()
   const doc = parser.parseFromString(post.value.contentHtml, 'text/html')
   const headings = doc.querySelectorAll('h2, h3')
