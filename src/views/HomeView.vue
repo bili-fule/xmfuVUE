@@ -141,15 +141,21 @@ watch(width, () => {
 })
 
 // ---- 触控横滑（Pointer Events）----
-// 仅在触控设备生效：手指拖动时内容 1:1 跟手（跟手系数 1，无衰减），
-// 松手后按位移 / 甩动速度判定，最多只前进或后退一页，绝不过多翻页；
-// 吸附用定长短动画，不做惯性滑行。
+// 仅在触控设备生效：手指拖动时内容 1:1 跟手（跟手系数 1，无衰减）；
+// 松手后按位移 / 甩动速度判定目标页（最多 ±1 页），再从当前位置播放惯性滑行动画：
+// 顺着松手时的 EMA 手指速度自然滑行、速度逐渐衰减，终点固定为目标整页，不多页、不突兀。
 const TOUCH_RESISTANCE = 1 // 跟手系数（1 = 内容位移 = 手指位移，完全跟手）
 const TOUCH_DRAG_THRESHOLD = 12 // px，水平累计位移超过该值才视为拖拽（区分点击）
 const TOUCH_PAGE_THRESHOLD = 0.2 // 跟手位移超过该比例即翻页（375px 手机约拖 75px）
 const TOUCH_FLING_MIN_PX = 40 // 甩动至少需要的手指位移（防轻微弹动误判）
 const TOUCH_FLING_VELOCITY = 0.65 // px/ms，甩动速度阈值（EMA 平滑后）
-const SMOOTH_SCROLL_MS = 300 // 翻页吸附动画时长（统一短动画，避免原生 smooth 时长不可控）
+// 惯性滑行参数（触摸松手专用；非触摸路径仍用下方 SMOOTH_SCROLL_MS 定长动画）
+const INERTIA_FRICTION = 0.9 // 速度衰减：每 16.7ms 速度 ×0.9（按帧长归一化，帧率无关）
+const INERTIA_MIN_SPEED = 0.25 // px/ms，滑行保底速度（保证最终滑到目标整页，不停在半路）
+const INERTIA_DECEL = 0.004 // px/ms²，距离限速：距整页越近允许速度越低（快甩也不急停）
+const INERTIA_ARRIVE_DIST = 1 // px，距目标整页小于该值即视为到位
+const INERTIA_MAX_DT = 32 // ms，单帧时长上限（低帧率防跳变）
+const SMOOTH_SCROLL_MS = 300 // 非触摸路径（按钮/页码/wheel/跳转）的定长翻页动画时长
 
 const isCoarsePointer =
   typeof window !== 'undefined' &&
@@ -181,7 +187,8 @@ function cancelScrollAnimation() {
   scrollAnimTrack = null
 }
 
-// 定长 rAF 吸附动画：时长可控，松手后不会惯性滑行。
+// 定长 rAF 翻页动画（非触摸路径：按钮/页码/wheel/跳转用）。
+// 时长固定 SMOOTH_SCROLL_MS，反馈短促明确；触摸松手改用 startInertiaScroll 惯性滑行。
 // 动画期间临时关闭原生 snap/smooth（避免与逐帧设置 scrollLeft 互相拉扯），
 // 完成后恢复；guard 传入当前手势代数时按代数检查，避免覆盖新手势期间的状态。
 function animateScrollTo(
@@ -226,6 +233,77 @@ function animateScrollTo(
       finish()
     }
   }
+  scrollAnimRaf = requestAnimationFrame(step)
+}
+
+// 惯性滑行（触摸松手专用）：从当前位置顺着松手速度自然滑到目标整页。
+// - 起始速度 = 松手瞬间 EMA 手指速度，方向与手指一致（与 scrollLeft 增长方向相反）
+// - 每帧 scrollLeft += v*dt，v 按 INERTIA_FRICTION 指数衰减，帧率无关
+// - 终点固定为 targetLeft（单页约束：目标页已由松手判定 clamp 到 startPage±1，
+//   滑行只在该整页内收敛，天然不可能滑多页）；INERTIA_MIN_SPEED 保证速度耗尽前必到整页
+// - INERTIA_DECEL 距离限速：接近整页时速度上限按剩余距离平方根收紧，避免快甩急停
+// - gen 防护：新手势开始时取消并跳过本动画
+function startInertiaScroll(
+  track: HTMLElement,
+  targetLeft: number,
+  velocity: number,
+  gen: number,
+) {
+  cancelScrollAnimation()
+  const from = track.scrollLeft
+  if (Math.abs(targetLeft - from) <= INERTIA_ARRIVE_DIST) {
+    track.scrollLeft = targetLeft
+    return
+  }
+
+  const finish = () => {
+    scrollAnimRaf = null
+    scrollAnimTrack = null
+    if (gen === touchGenCounter) {
+      track.style.scrollSnapType = ''
+      track.style.scrollBehavior = ''
+    }
+  }
+
+  // 起始速度与手指方向一致（手指左滑 → scrollLeft 增大，故取 -velocity）；
+  // 若与目标方向相反（极罕见的反向甩动），从静止朝目标起步，避免"滑出去又弹回来"
+  let v = -velocity
+  const dir = Math.sign(targetLeft - from)
+  if (dir === 0 || Math.sign(v) !== dir) v = dir * INERTIA_MIN_SPEED
+
+  // 滑行期间临时关闭原生 snap/smooth，避免与逐帧设置 scrollLeft 相互拉扯
+  track.style.scrollSnapType = 'none'
+  track.style.scrollBehavior = 'auto'
+
+  let last = performance.now()
+  const step = (now: number) => {
+    if (gen !== touchGenCounter) return // 新手势打断
+    const dt = Math.min(now - last, INERTIA_MAX_DT)
+    last = now
+    const remaining = targetLeft - track.scrollLeft
+
+    // 时间衰减（按帧长归一化，帧率无关）
+    v *= Math.pow(INERTIA_FRICTION, dt / 16.7)
+    // 距离限速：保证接近整页时速度足够低，自然减速停下
+    const speedCap = Math.sqrt(2 * INERTIA_DECEL * Math.abs(remaining))
+    if (Math.abs(v) > speedCap) v = Math.sign(v) * Math.max(speedCap, INERTIA_MIN_SPEED)
+    // 保底速度：速度耗尽前必达整页
+    if (Math.abs(v) < INERTIA_MIN_SPEED) v = Math.sign(v) * INERTIA_MIN_SPEED
+
+    const next = track.scrollLeft + v * dt
+    // 到达 / 越过目标整页 → 钉在整页并停止
+    if (
+      Math.abs(targetLeft - next) <= INERTIA_ARRIVE_DIST ||
+      (next - targetLeft) * (track.scrollLeft - targetLeft) < 0
+    ) {
+      track.scrollLeft = targetLeft
+      finish()
+      return
+    }
+    track.scrollLeft = next
+    scrollAnimRaf = requestAnimationFrame(step)
+  }
+  scrollAnimTrack = track
   scrollAnimRaf = requestAnimationFrame(step)
 }
 
@@ -376,8 +454,8 @@ function onPointerUp(e: PointerEvent) {
   else if (dxTotal > TOUCH_FLING_MIN_PX && velocity > TOUCH_FLING_VELOCITY) delta = -1
 
   const target = clampScroll(startPage + delta, 0, pages.value.length - 1)
-  // 统一短动画吸附到整页（时长可控、无惯性滑行），完成后恢复原生 snap/smooth
-  animateScrollTo(track, target * pageWidth, SMOOTH_SCROLL_MS, undefined, gen)
+  // 惯性滑行：顺着松手速度自然滑到 target 整页（最多一页），无固定时长动画
+  startInertiaScroll(track, target * pageWidth, velocity, gen)
   // 兜底恢复（scrollend / 800ms），防御动画异常中断后 snap 未恢复
   restoreTrackStyles(track, gen)
 }
