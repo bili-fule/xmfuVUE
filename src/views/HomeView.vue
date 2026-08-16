@@ -140,12 +140,193 @@ watch(width, () => {
   })
 })
 
+// ---- 触控阻尼横滑（Pointer Events）----
+// 仅在触控设备生效：手指拖动时内容位移 = 手指位移 × TOUCH_RESISTANCE（阻尼），
+// 松手后按阻尼位移 / 甩动速度判定，最多只前进或后退一页，绝不过多翻页。
+const TOUCH_RESISTANCE = 0.5 // 内容位移 / 手指位移 阻尼系数
+const TOUCH_DRAG_THRESHOLD = 12 // px，水平累计位移超过该值才视为拖拽（区分点击）
+const TOUCH_PAGE_THRESHOLD = 0.15 // 阻尼后位移超过该比例即翻页
+const TOUCH_FLING_MIN_PX = 30 // 甩动至少需要的手指位移
+const TOUCH_FLING_VELOCITY = 0.55 // px/ms，甩动速度阈值
+
+const isCoarsePointer =
+  typeof window !== 'undefined' &&
+  !!window.matchMedia &&
+  window.matchMedia('(any-pointer: coarse)').matches
+
+let touchPointerId: number | null = null
+let touchStartX = 0
+let touchStartY = 0
+let touchStartScroll = 0
+let touchLastX = 0
+let touchLastY = 0
+let touchLastTime = 0
+let touchDxTotal = 0
+let touchDyTotal = 0
+let touchVelocity = 0 // EMA 平滑后的手指速度 px/ms
+let touchDragging = false
+let touchAborted = false
+let touchGenCounter = 0 // 手势代数：防止上一手势的延迟恢复覆盖当前手势
+
+function clampScroll(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(v, max))
+}
+
+function resetTouchState() {
+  touchPointerId = null
+  touchDragging = false
+  touchAborted = false
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('pointercancel', onPointerUp)
+}
+
+// 平滑吸附完成后恢复原生 snap / smooth；scrollend 触发或 800ms 兜底。
+// 仅当手势代数未变时才真正恢复，避免覆盖新手势期间的状态。
+function restoreTrackStyles(track: HTMLElement, gen: number) {
+  const restore = () => {
+    if (gen !== touchGenCounter) return
+    track.style.scrollSnapType = ''
+    track.style.scrollBehavior = ''
+  }
+  const onEnd = () => {
+    restore()
+    track.removeEventListener('scrollend', onEnd)
+  }
+  track.addEventListener('scrollend', onEnd, { once: true })
+  window.setTimeout(restore, 800)
+}
+
+// 拖拽后抑制紧随其后的 click，避免误触卡片链接
+function suppressNextClick() {
+  const onClick = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+  }
+  window.addEventListener('click', onClick, { capture: true, once: true })
+}
+
+function onPointerDown(e: PointerEvent) {
+  if (!isCoarsePointer || e.pointerType !== 'touch') return
+  if (touchPointerId !== null) return // 已有一根手指在拖，忽略多指
+  const track = trackRef.value
+  if (!track) return
+
+  touchGenCounter++
+  touchPointerId = e.pointerId
+  touchStartX = e.clientX
+  touchStartY = e.clientY
+  touchLastX = e.clientX
+  touchLastY = e.clientY
+  touchLastTime = performance.now()
+  touchStartScroll = track.scrollLeft
+  touchDxTotal = 0
+  touchDyTotal = 0
+  touchVelocity = 0
+  touchDragging = false
+  touchAborted = false
+
+  // 拖拽期间临时关闭原生 snap 与 smooth，避免与手动 scrollLeft 相互拉扯
+  track.style.scrollSnapType = 'none'
+  track.style.scrollBehavior = 'auto'
+
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('pointercancel', onPointerUp)
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (touchPointerId === null || e.pointerId !== touchPointerId) return
+  const track = trackRef.value
+  if (!track || touchAborted) return
+
+  const now = performance.now()
+  const dt = now - touchLastTime
+  const dx = e.clientX - touchLastX
+  const dy = e.clientY - touchLastY
+
+  if (dt >= 8) {
+    const inst = dx / dt
+    touchVelocity = touchVelocity * 0.6 + inst * 0.4
+    touchLastTime = now
+  }
+  touchLastX = e.clientX
+  touchLastY = e.clientY
+
+  touchDxTotal += Math.abs(dx)
+  touchDyTotal += Math.abs(dy)
+
+  // 轴锁定：竖直主导的手势放弃横滑，避免纵向滑动误翻页
+  if (!touchDragging && touchDxTotal + touchDyTotal > TOUCH_DRAG_THRESHOLD) {
+    if (touchDyTotal > touchDxTotal * 1.2) {
+      touchAborted = true
+      track.scrollLeft = touchStartScroll
+      return
+    }
+    touchDragging = true
+  }
+
+  if (!touchDragging) return
+
+  // 阻尼跟随：内容位移 = 手指位移 × 0.5，并 clamp 到合法范围（不越界）
+  const fingerDelta = e.clientX - touchStartX
+  const maxScroll = track.scrollWidth - track.clientWidth
+  track.scrollLeft = clampScroll(
+    touchStartScroll - fingerDelta * TOUCH_RESISTANCE,
+    0,
+    Math.max(0, maxScroll),
+  )
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (touchPointerId === null || e.pointerId !== touchPointerId) return
+  const track = trackRef.value
+  const gen = touchGenCounter
+  const aborted = touchAborted
+  const wasDragging = touchDragging
+  const startScroll = touchStartScroll
+  const dxTotal = touchDxTotal
+  const velocity = touchVelocity
+
+  resetTouchState()
+
+  if (!track) return
+
+  if (aborted) {
+    track.scrollLeft = startScroll
+    restoreTrackStyles(track, gen)
+    return
+  }
+
+  // 真实拖拽后抑制后续 click，避免误触卡片链接
+  if (wasDragging) suppressNextClick()
+
+  const pageWidth = track.clientWidth
+  const startPage = clampScroll(Math.round(startScroll / pageWidth), 0, pages.value.length - 1)
+  const dampedMove = (track.scrollLeft - startScroll) / pageWidth
+
+  // 最多翻一页：先看阻尼位移是否过半阈值，再看甩动速度（均带符号）。
+  // 手指左滑 → scrollLeft 增大 → 前进（delta=+1）；右滑 → 后退（delta=-1）。
+  let delta = 0
+  if (dampedMove > TOUCH_PAGE_THRESHOLD) delta = 1
+  else if (dampedMove < -TOUCH_PAGE_THRESHOLD) delta = -1
+  else if (dxTotal > TOUCH_FLING_MIN_PX && velocity < -TOUCH_FLING_VELOCITY) delta = 1
+  else if (dxTotal > TOUCH_FLING_MIN_PX && velocity > TOUCH_FLING_VELOCITY) delta = -1
+
+  const target = clampScroll(startPage + delta, 0, pages.value.length - 1)
+  scrollToIndex(target)
+  restoreTrackStyles(track, gen)
+}
+
 onMounted(() => {
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
 })
 
 onUnmounted(() => {
   trackRef.value?.removeEventListener('wheel', onWheel)
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('pointercancel', onPointerUp)
 })
 </script>
 
@@ -164,8 +345,9 @@ onUnmounted(() => {
     <!-- 横向翻页轨道：section 满宽，确保每次 snap 和 clientWidth 滚动完全等宽对齐 -->
     <div
       ref="trackRef"
-      class="flex flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth scrollbar-hide"
+      class="flex flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth scrollbar-hide track-touch-control"
       @scroll="onScroll"
+      @pointerdown="onPointerDown"
     >
       <section
         v-for="(page, pageIndex) in pages"
@@ -299,5 +481,12 @@ onUnmounted(() => {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+/* 触控设备：接管横向拖拽（配合 Pointer Events 阻尼横滑）。
+   仅 coarse 指针设备生效，桌面鼠标/触控板 wheel 与原生横向滚动不受影响。 */
+@media (any-pointer: coarse) {
+  .track-touch-control {
+    touch-action: none;
+  }
 }
 </style>
