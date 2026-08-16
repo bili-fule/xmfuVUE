@@ -65,7 +65,7 @@ function scrollToIndex(index: number) {
   const pageWidth = trackRef.value.clientWidth
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
   currentPage.value = target
-  trackRef.value.scrollTo({ left: pageWidth * target, behavior: 'smooth' })
+  animateScrollTo(trackRef.value, pageWidth * target, SMOOTH_SCROLL_MS)
 }
 
 function handlePrev() {
@@ -140,14 +140,16 @@ watch(width, () => {
   })
 })
 
-// ---- 触控阻尼横滑（Pointer Events）----
-// 仅在触控设备生效：手指拖动时内容位移 = 手指位移 × TOUCH_RESISTANCE（阻尼），
-// 松手后按阻尼位移 / 甩动速度判定，最多只前进或后退一页，绝不过多翻页。
-const TOUCH_RESISTANCE = 0.5 // 内容位移 / 手指位移 阻尼系数
+// ---- 触控横滑（Pointer Events）----
+// 仅在触控设备生效：手指拖动时内容 1:1 跟手（跟手系数 1，无衰减），
+// 松手后按位移 / 甩动速度判定，最多只前进或后退一页，绝不过多翻页；
+// 吸附用定长短动画，不做惯性滑行。
+const TOUCH_RESISTANCE = 1 // 跟手系数（1 = 内容位移 = 手指位移，完全跟手）
 const TOUCH_DRAG_THRESHOLD = 12 // px，水平累计位移超过该值才视为拖拽（区分点击）
-const TOUCH_PAGE_THRESHOLD = 0.15 // 阻尼后位移超过该比例即翻页
-const TOUCH_FLING_MIN_PX = 30 // 甩动至少需要的手指位移
-const TOUCH_FLING_VELOCITY = 0.55 // px/ms，甩动速度阈值
+const TOUCH_PAGE_THRESHOLD = 0.2 // 跟手位移超过该比例即翻页（375px 手机约拖 75px）
+const TOUCH_FLING_MIN_PX = 40 // 甩动至少需要的手指位移（防轻微弹动误判）
+const TOUCH_FLING_VELOCITY = 0.65 // px/ms，甩动速度阈值（EMA 平滑后）
+const SMOOTH_SCROLL_MS = 300 // 翻页吸附动画时长（统一短动画，避免原生 smooth 时长不可控）
 
 const isCoarsePointer =
   typeof window !== 'undefined' &&
@@ -167,6 +169,65 @@ let touchVelocity = 0 // EMA 平滑后的手指速度 px/ms
 let touchDragging = false
 let touchAborted = false
 let touchGenCounter = 0 // 手势代数：防止上一手势的延迟恢复覆盖当前手势
+
+let scrollAnimRaf: number | null = null // rAF 吸附动画句柄
+let scrollAnimTrack: HTMLElement | null = null
+
+function cancelScrollAnimation() {
+  if (scrollAnimRaf !== null) {
+    cancelAnimationFrame(scrollAnimRaf)
+    scrollAnimRaf = null
+  }
+  scrollAnimTrack = null
+}
+
+// 定长 rAF 吸附动画：时长可控，松手后不会惯性滑行。
+// 动画期间临时关闭原生 snap/smooth（避免与逐帧设置 scrollLeft 互相拉扯），
+// 完成后恢复；guard 传入当前手势代数时按代数检查，避免覆盖新手势期间的状态。
+function animateScrollTo(
+  track: HTMLElement,
+  targetLeft: number,
+  duration = SMOOTH_SCROLL_MS,
+  onDone?: () => void,
+  guard?: number,
+) {
+  cancelScrollAnimation()
+  const from = track.scrollLeft
+  const diff = targetLeft - from
+
+  const finish = () => {
+    scrollAnimRaf = null
+    scrollAnimTrack = null
+    if (guard === undefined || guard === touchGenCounter) {
+      track.style.scrollSnapType = ''
+      track.style.scrollBehavior = ''
+    }
+    onDone?.()
+  }
+
+  track.style.scrollSnapType = 'none'
+  track.style.scrollBehavior = 'auto'
+
+  if (Math.abs(diff) < 1) {
+    finish()
+    return
+  }
+
+  const startTime = performance.now()
+  scrollAnimTrack = track
+  const step = (now: number) => {
+    if (!scrollAnimTrack) return
+    const t = Math.min(1, (now - startTime) / duration)
+    const eased = 1 - Math.pow(1 - t, 3) // easeOutCubic：起步跟手、收尾轻缓
+    track.scrollLeft = from + diff * eased
+    if (t < 1) {
+      scrollAnimRaf = requestAnimationFrame(step)
+    } else {
+      finish()
+    }
+  }
+  scrollAnimRaf = requestAnimationFrame(step)
+}
 
 function clampScroll(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(v, max))
@@ -213,6 +274,7 @@ function onPointerDown(e: PointerEvent) {
   if (!track) return
 
   touchGenCounter++
+  cancelScrollAnimation() // 手势开始即打断可能进行中的吸附动画
   touchPointerId = e.pointerId
   touchStartX = e.clientX
   touchStartY = e.clientY
@@ -268,7 +330,7 @@ function onPointerMove(e: PointerEvent) {
 
   if (!touchDragging) return
 
-  // 阻尼跟随：内容位移 = 手指位移 × 0.5，并 clamp 到合法范围（不越界）
+  // 跟手跟随：内容位移 = 手指位移（1:1），并 clamp 到合法范围（不越界）
   const fingerDelta = e.clientX - touchStartX
   const maxScroll = track.scrollWidth - track.clientWidth
   track.scrollLeft = clampScroll(
@@ -314,7 +376,9 @@ function onPointerUp(e: PointerEvent) {
   else if (dxTotal > TOUCH_FLING_MIN_PX && velocity > TOUCH_FLING_VELOCITY) delta = -1
 
   const target = clampScroll(startPage + delta, 0, pages.value.length - 1)
-  scrollToIndex(target)
+  // 统一短动画吸附到整页（时长可控、无惯性滑行），完成后恢复原生 snap/smooth
+  animateScrollTo(track, target * pageWidth, SMOOTH_SCROLL_MS, undefined, gen)
+  // 兜底恢复（scrollend / 800ms），防御动画异常中断后 snap 未恢复
   restoreTrackStyles(track, gen)
 }
 
@@ -327,6 +391,7 @@ onUnmounted(() => {
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('pointercancel', onPointerUp)
+  cancelScrollAnimation()
 })
 </script>
 
