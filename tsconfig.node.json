@@ -1,11 +1,26 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.node.json",
-  "include": ["vite.config.*", "src/plugins/**/*.ts", "src/lib/site.ts"],
   "compilerOptions": {
-    "composite": true,
-    "types": ["node"],
-    "moduleResolution": "bundler",
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "noImplicitThis": true,
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "target": "ESNext",
+    "useDefineForClassFields": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
-  }
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.*", "src/plugins/**/*.ts", "src/lib/site.ts"]
 }
