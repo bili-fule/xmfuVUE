@@ -145,6 +145,12 @@ function virtualModuleCode(posts: Post[]): string {
   return `export const posts = ${JSON.stringify(posts)}`
 }
 
+function isPostFile(file: string, postsDir: string): boolean {
+  const normalizedFile = path.normalize(file)
+  const normalizedPostsDir = path.normalize(postsDir)
+  return normalizedFile.startsWith(`${normalizedPostsDir}${path.sep}`) && normalizedFile.endsWith('.md')
+}
+
 /**
  * dev 下失效 virtual:posts 模块并触发全页 reload。
  * 文章列表是全局数据（首页、归档、搜索、RSS 都依赖），HMR 局部更新容易状态错位，
@@ -284,17 +290,15 @@ export function mdPosts(): Plugin {
     },
 
     handleHotUpdate(ctx) {
-      // dev 下监听 md 目录变更，失效 virtual:posts 模块并触发其依赖更新
-      if (ctx.file.startsWith(postsDir) && ctx.file.endsWith('.md')) {
+      // Markdown 是全局虚拟数据，局部 HMR 容易让文章页和列表页保留旧快照。
+      // 统一失效模块并整页刷新，确保当前路由、SEO 和搜索索引都读到同一份数据。
+      if (isPostFile(ctx.file, postsDir)) {
         // 同时重写搜索索引
         if (publicDir) {
           writeSearchIndex(postsDir, publicDir)
         }
-        const mod = ctx.server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID)
-        if (mod) {
-          ctx.server.moduleGraph.invalidateModule(mod)
-          return [...mod.importers]
-        }
+        invalidatePostsModule(ctx.server)
+        return []
       }
     },
 
@@ -306,7 +310,7 @@ export function mdPosts(): Plugin {
       // 失效 virtual:posts 并广播 HMR，实现和 Fuwari 一样的「加文章即见」体验。
       // 改动时勿删此块，否则「新增文章不热更新」bug 反弹。
       const onPostsChange = (file: string) => {
-        if (file.startsWith(postsDir) && file.endsWith('.md')) {
+        if (isPostFile(file, postsDir)) {
           if (publicDir) {
             writeSearchIndex(postsDir, publicDir)
           }
