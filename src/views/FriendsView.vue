@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { siteConfig } from '@/data/site'
+import { SITE } from '@/lib/site'
 import { t } from '@/i18n'
 
 const { friends, site, author } = siteConfig
@@ -80,7 +81,7 @@ const { friends, site, author } = siteConfig
               </h4>
               <pre class="p-4 rounded-lg bg-muted text-xs font-mono text-foreground/90 overflow-x-auto border border-border/50"><code>name: {{ site.title }}
 desc: {{ site.description }}
-link: https://blog.fulie.me
+link: {{ SITE.baseUrl }}
 avatar: {{ author.avatar }}</code></pre>
             </div>
 

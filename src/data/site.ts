@@ -66,7 +66,7 @@ export const siteConfig: SiteConfig = {
       name: 'Morlvoid',
       url: 'https://www.morlvoid.pro/',
       description: '事已至此先睡觉吧',
-      avatar: 'https://blog.xmfu.cn/Morlvoid.png',
+      avatar: 'https://www.xmfu.cn/Morlvoid.png',
     },
   ],
   license: {
