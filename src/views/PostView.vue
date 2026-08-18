@@ -163,7 +163,7 @@ function coverBackground(cover: string): string {
   <div
     v-if="post"
     ref="scrollContainerRef"
-    class="h-full overflow-y-auto relative scroll-smooth"
+    class="h-full min-h-0 min-w-0 overflow-y-auto relative scroll-smooth"
     @scroll="handleScroll"
   >
     <div class="mx-auto max-w-5xl px-4 py-6 md:py-10 space-y-8">
@@ -175,9 +175,9 @@ function coverBackground(cover: string): string {
         </RouterLink>
       </Button>
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div class="grid min-w-0 grid-cols-1 items-start gap-8 xl:grid-cols-12">
         <!-- 主文章内容区 -->
-        <article class="space-y-8" :class="tocItems.length > 0 ? 'lg:col-span-8' : 'lg:col-span-12'">
+        <article class="min-w-0 space-y-8" :class="tocItems.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'">
           <header class="space-y-4">
             <div v-if="post.category" class="flex items-center gap-2">
               <span class="inline-flex items-center gap-1 text-xs font-medium text-primary px-2.5 py-1 rounded-full bg-primary/10">
@@ -211,7 +211,7 @@ function coverBackground(cover: string): string {
           <!-- 窄屏内嵌目录 (TOC) -->
           <div
             v-if="tocItems.length > 0"
-            class="block lg:hidden rounded-xl border bg-card/60 p-4 space-y-2 backdrop-blur-sm"
+            class="block rounded-xl border bg-card/60 p-4 space-y-2 backdrop-blur-sm xl:hidden"
           >
             <div class="flex items-center gap-1.5 font-semibold text-sm text-foreground">
               <ListTree class="size-4 text-primary" />
@@ -261,7 +261,7 @@ function coverBackground(cover: string): string {
           <!-- Markdown 编译后内容 -->
           <div
             ref="contentContainerRef"
-            class="prose prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-6 prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-img:border prose-img:shadow-sm leading-relaxed"
+            class="prose prose-neutral dark:prose-invert min-w-0 max-w-none prose-headings:scroll-mt-6 prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl prose-img:border prose-img:shadow-sm leading-relaxed"
             v-html="post.contentHtml"
           />
         </article>
@@ -269,13 +269,13 @@ function coverBackground(cover: string): string {
         <!-- 宽屏侧边栏目录 (TOC) -->
         <aside
           v-if="tocItems.length > 0"
-          class="hidden lg:block lg:col-span-4 sticky top-6 space-y-3 rounded-xl border bg-card/50 p-5 backdrop-blur-sm"
+          class="sticky top-6 hidden space-y-3 rounded-xl border bg-card/50 p-5 backdrop-blur-sm xl:col-span-4 xl:block"
         >
           <div class="flex items-center gap-2 font-semibold text-sm text-foreground border-b pb-2.5">
             <ListTree class="size-4 text-primary" />
             <span>{{ t('post.toc') }}</span>
           </div>
-          <nav class="space-y-1 max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+          <nav class="max-h-[calc(100dvh-14rem)] space-y-1 overflow-y-auto pr-1">
             <button
               v-for="item in tocItems"
               :key="item.id"

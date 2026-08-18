@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Loader2, FileText, ArrowRight, X, Command } from 'lucide-vue-next'
+import { Search, Loader2, FileText, ArrowRight, X } from 'lucide-vue-next'
 import { searchPosts } from '@/lib/search'
 import { t } from '@/i18n'
 
@@ -108,13 +108,13 @@ onUnmounted(() => {
     <Transition name="search-fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-[90] flex items-start justify-center bg-background/80 backdrop-blur-sm p-4 pt-16 sm:pt-24"
+        class="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-background/80 p-4 pt-16 backdrop-blur-sm sm:pt-24"
         role="dialog"
         aria-modal="true"
         @click="handleClose"
       >
         <div
-          class="relative w-full max-w-2xl overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl transition-all"
+          class="relative flex max-h-[calc(100dvh-5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-2xl transition-all"
           @click.stop
         >
           <!-- 搜索输入框 -->
@@ -142,7 +142,7 @@ onUnmounted(() => {
           </div>
 
           <!-- 搜索结果列表 / 状态展示 -->
-          <div class="max-h-[60vh] overflow-y-auto p-2">
+          <div class="min-h-0 max-h-[60vh] flex-1 overflow-y-auto p-2">
             <!-- 初始空提示 -->
             <div
               v-if="!query.trim()"

@@ -14,7 +14,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const coverHeightClass = computed(() =>
-  props.compact ? 'flex-1 min-h-16 max-h-28' : 'min-h-32 shrink-0',
+  props.compact ? 'h-16 shrink-0' : 'min-h-32 shrink-0',
 )
 
 function isImageCover(cover: string): boolean {
@@ -28,7 +28,10 @@ function coverBackground(cover: string): string {
 
 <template>
   <Card
-    class="flex h-full w-full flex-col overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 bg-card/90 backdrop-blur-sm"
+    :class="[
+      'flex h-full w-full flex-col overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg bg-card/90 backdrop-blur-sm',
+      compact ? 'min-h-[15.5rem] gap-3 py-4' : '',
+    ]"
   >
     <!-- 封面区：compact 时 flex-1 弹性吸收剩余高度（min/max 约束），避免挤压文本区 -->
     <div
@@ -62,9 +65,13 @@ function coverBackground(cover: string): string {
       </div>
     </div>
 
-    <CardHeader class="shrink-0 p-4 sm:p-5">
+    <CardHeader :class="compact ? 'shrink-0 p-3' : 'shrink-0 p-4 sm:p-5'">
       <div class="space-y-1.5">
-        <CardTitle class="line-clamp-2 text-base font-semibold leading-snug transition-colors group-hover:text-primary md:text-lg">
+        <CardTitle
+          :class="compact
+            ? 'line-clamp-2 text-sm font-semibold leading-snug transition-colors group-hover:text-primary sm:text-base'
+            : 'line-clamp-2 text-base font-semibold leading-snug transition-colors group-hover:text-primary md:text-lg'"
+        >
           {{ post.title }}
         </CardTitle>
         <CardDescription :class="compact ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-sm'">
@@ -83,7 +90,11 @@ function coverBackground(cover: string): string {
       </div>
     </CardHeader>
 
-    <CardFooter class="mt-auto flex items-center justify-between p-4 pt-0 sm:p-5 sm:pt-0 text-xs text-muted-foreground">
+    <CardFooter
+      :class="compact
+        ? 'mt-auto flex items-center justify-between p-3 pt-0 text-[11px] text-muted-foreground'
+        : 'mt-auto flex items-center justify-between p-4 pt-0 text-xs text-muted-foreground sm:p-5 sm:pt-0'"
+    >
       <div class="flex items-center gap-1.5">
         <Calendar class="size-3.5 opacity-70" />
         <time :datetime="post.date">{{ formatDate(post.date) }}</time>

@@ -11,7 +11,7 @@ const { author, site, license } = siteConfig
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto">
+  <div class="h-full min-w-0 overflow-y-auto">
     <div class="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-10">
       <!-- 个人主卡片 -->
       <Card class="overflow-hidden border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
