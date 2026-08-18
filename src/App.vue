@@ -13,6 +13,7 @@ const toggleDark = useToggle(isDark)
 const route = useRoute()
 const searchOpen = ref(false)
 const mobileMenuOpen = ref(false)
+const searchShortcut = ref('Ctrl K')
 
 const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
@@ -44,7 +45,13 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
+function getSearchShortcut(): string {
+  const platform = `${navigator.platform} ${navigator.userAgent}`
+  return /Mac|iPhone|iPad|iPod/.test(platform) ? '⌘K' : 'Ctrl K'
+}
+
 onMounted(() => {
+  searchShortcut.value = getSearchShortcut()
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 
@@ -104,7 +111,7 @@ const currentYear = new Date().getFullYear()
           >
             <Search class="size-4" />
             <kbd class="hidden md:inline-flex items-center rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-              ⌘K
+              {{ searchShortcut }}
             </kbd>
           </Button>
 
