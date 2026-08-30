@@ -5,7 +5,7 @@ import { ArrowLeft, Calendar, Clock, Folder, ListTree, ArrowUp } from 'lucide-vu
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import GiscusComment from '@/components/GiscusComment.vue'
+// import GiscusComment from '@/components/GiscusComment.vue'
 import Lightbox from '@/components/Lightbox.vue'
 import { getPostBySlug, formatDate } from '@/data/posts'
 import { t } from '@/i18n'
@@ -295,11 +295,12 @@ function coverBackground(cover: string): string {
 
       <Separator />
 
-      <!-- 底部评论区 -->
+      <!--
       <section class="space-y-4 pt-4">
         <h2 class="text-xl font-semibold tracking-tight text-foreground">评论交流</h2>
         <GiscusComment />
       </section>
+      -->
 
       <div class="pt-2">
         <Button variant="ghost" size="sm" as-child>
