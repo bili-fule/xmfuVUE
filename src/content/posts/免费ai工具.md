@@ -7,6 +7,9 @@ tags: ['AI', '编程', '工具', 'Codex', 'Gemini', 'Antigravity']
 category: '技术分享'
 draft: false
 lang: 'zh-CN'
+origin: ai
+editorialStatus: raw
+conversationSummary: 原始生成对话历史未保存。
 ---
 
 # 前言

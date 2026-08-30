@@ -7,6 +7,9 @@ tags: [Vue, Tailwind CSS, 响应式布局, 前端, 博客重构]
 category: 技术
 draft: false
 lang: ''
+origin: ai
+editorialStatus: raw
+conversationSummary: 原始生成对话历史未保存。
 ---
 
 这个博客从 Fuwari 迁移到 Vue 之后，首页看起来已经能用了，但在不同尺寸的窗口里总有一些小问题。

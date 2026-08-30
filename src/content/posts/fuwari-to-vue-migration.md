@@ -7,6 +7,9 @@ tags: [Vue, Vite, shadcn-vue, 博客重构, 迁移]
 category: 技术
 draft: false
 lang: ''
+origin: ai
+editorialStatus: raw
+conversationSummary: 原始生成对话历史未保存。
 ---
 
 Fuwari 用了挺久，但越用越觉得不顺手。

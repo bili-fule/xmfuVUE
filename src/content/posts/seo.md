@@ -7,6 +7,9 @@ tags: ['SEO', 'Astro', 'AI', 'Web开发']
 category: '技术分享'
 draft: false
 lang: ''
+origin: ai
+editorialStatus: raw
+conversationSummary: 原始生成对话历史未保存。
 ---
 
 > > [!WARNING]
