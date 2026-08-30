@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { BookOpenText } from '@lucide/vue'
 import { Calendar, Clock, Folder } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,6 +46,13 @@ function coverBackground(cover: string): string {
         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         loading="lazy"
       />
+      <div
+        v-else-if="!post.cover"
+        class="flex h-full w-full items-center justify-center bg-muted/50 text-muted-foreground"
+        aria-hidden="true"
+      >
+        <BookOpenText class="size-10" aria-hidden="true" />
+      </div>
       <div
         v-else
         class="flex h-full w-full items-center justify-center"
