@@ -1,7 +1,7 @@
 import { ViteSSG } from 'vite-ssg'
 import App from './App.vue'
 import { routes } from './router'
-import { getAllPosts, getPostBySlug } from '@/data/posts'
+import { getAllPublishedPosts, getPostBySlug } from '@/data/posts'
 import { applyPostMeta } from '@/lib/seo'
 import './style.css'
 import 'highlight.js/styles/github-dark.css'
@@ -17,7 +17,14 @@ export const createApp = ViteSSG(
       const post = to.name === 'post' && typeof to.params.slug === 'string'
         ? getPostBySlug(to.params.slug)
         : null
-      applyPostMeta(head, post ? { title: post.title, excerpt: post.excerpt, slug: post.slug } : null)
+      applyPostMeta(head, post
+        ? {
+            title: post.title,
+            excerpt: post.excerpt,
+            slug: post.slug,
+            noindex: post.origin === 'ai',
+          }
+        : null)
     })
   },
 )
@@ -26,6 +33,6 @@ export const createApp = ViteSSG(
 // 需自行过滤含 ':' / '*' 的路径，避免 Windows 非法文件名与空壳页面。
 export function includedRoutes(paths: string[]): string[] {
   const staticPaths = paths.filter((p) => !p.includes(':') && !p.includes('*'))
-  const postPaths = getAllPosts().map((p) => `/post/${p.slug}`)
+  const postPaths = getAllPublishedPosts().map((p) => `/post/${p.slug}`)
   return [...staticPaths, ...postPaths]
 }

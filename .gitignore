@@ -30,3 +30,4 @@ node_modules/.tmp
 
 # 构建产物（由 md-posts 插件生成）
 public/search-index.json
+public/downloads/

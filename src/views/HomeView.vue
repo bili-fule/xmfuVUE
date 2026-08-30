@@ -4,10 +4,10 @@ import { RouterLink } from 'vue-router'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
-import { getAllPosts, type Post } from '@/data/posts'
+import { getHomePosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
 
-const posts = getAllPosts()
+const posts = getHomePosts()
 const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
 const jumpInput = ref('')

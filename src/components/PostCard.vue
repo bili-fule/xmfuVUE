@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BookOpenText } from '@lucide/vue'
-import { Calendar, Clock, Folder } from 'lucide-vue-next'
+import { Calendar, Clock, Folder, Bot, MessageSquareText, BookOpenText } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate, type Post } from '@/data/posts'
@@ -75,6 +74,16 @@ function coverBackground(cover: string): string {
 
     <CardHeader :class="compact ? 'shrink-0 p-3' : 'shrink-0 p-4 sm:p-5'">
       <div class="space-y-1.5">
+        <div v-if="post.origin === 'ai'" class="flex flex-wrap items-center gap-2 text-[11px] font-medium text-primary">
+          <span class="inline-flex items-center gap-1">
+            <Bot class="size-3.5" />
+            {{ t('post.aiOriginal') }}
+          </span>
+          <span v-if="post.prompt || post.conversation.length > 0" class="inline-flex items-center gap-1 text-muted-foreground">
+            <MessageSquareText class="size-3.5" />
+            {{ t('post.conversation') }}
+          </span>
+        </div>
         <CardTitle
           :class="compact
             ? 'line-clamp-2 text-sm font-semibold leading-snug transition-colors group-hover:text-primary sm:text-base'

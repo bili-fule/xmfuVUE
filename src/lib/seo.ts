@@ -5,22 +5,29 @@ export interface PostMetaInput {
   title: string
   excerpt: string
   slug: string
+  noindex?: boolean
 }
 
-function buildHeadInput(meta: PostMetaInput | null) {
+function buildHeadInput(post: PostMetaInput | null) {
   const base = SITE.baseUrl.replace(/\/$/, '')
-  const title = meta ? meta.title : SITE.title
-  const description = meta ? meta.excerpt : SITE.description
-  const url = meta ? `${base}/post/${encodeURIComponent(meta.slug)}` : SITE.baseUrl
+  const title = post ? post.title : SITE.title
+  const description = post ? post.excerpt : SITE.description
+  const url = post ? `${base}/post/${encodeURIComponent(post.slug)}` : SITE.baseUrl
+
+  const metaTags: Array<{ name?: string; property?: string; content: string }> = [
+    { name: 'description', content: description },
+    { property: 'og:title', content: title },
+    { property: 'og:description', content: description },
+    { property: 'og:url', content: url },
+  ]
+
+  if (post?.noindex) {
+    metaTags.push({ name: 'robots', content: 'noindex,follow' })
+  }
 
   return {
     title,
-    meta: [
-      { name: 'description', content: description },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: description },
-      { property: 'og:url', content: url },
-    ],
+    meta: metaTags,
   }
 }
 

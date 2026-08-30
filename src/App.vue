@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
-import { Moon, Sun, Home, Archive, Users, User, Search, Menu, X } from 'lucide-vue-next'
+import { Moon, Sun, Home, Archive, Bot, Users, User, Search, Menu, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SearchModal from '@/components/SearchModal.vue'
 import { siteConfig } from '@/data/site'
@@ -18,6 +18,7 @@ const searchShortcut = ref('Ctrl K')
 const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
   { name: t('nav.archive') || '归档', path: '/archive', icon: Archive },
+  { name: t('nav.aiLab') || 'AI 实验室', path: '/ai-lab', icon: Bot },
   { name: t('nav.friends') || '友链', path: '/friends', icon: Users },
   { name: t('nav.about') || '关于', path: '/about', icon: User },
 ])

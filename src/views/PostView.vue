@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { ArrowLeft, Calendar, Clock, Folder, ListTree, ArrowUp } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  ArrowUp,
+  Bot,
+  Calendar,
+  Clock,
+  Download,
+  FileDown,
+  Folder,
+  ListTree,
+  MessageSquareText,
+  Sparkles,
+} from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -16,6 +28,11 @@ interface Props {
 
 const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
+const backPath = computed(() => post.value?.origin === 'ai' ? '/ai-lab' : '/')
+const backLabel = computed(() => post.value?.origin === 'ai' ? t('post.backAiLab') : t('post.back'))
+const downloadBase = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/downloads`
+const markdownDownloadUrl = computed(() => post.value ? `${downloadBase}/${encodeURIComponent(post.value.slug)}.md` : '')
+const recordDownloadUrl = computed(() => post.value ? `${downloadBase}/${encodeURIComponent(post.value.slug)}-generation-record.md` : '')
 
 // 容器与回到顶部
 const scrollContainerRef = ref<HTMLDivElement | null>(null)
@@ -157,6 +174,7 @@ function isImageCover(cover: string): boolean {
 function coverBackground(cover: string): string {
   return cover || 'linear-gradient(135deg, #262626 0%, #525252 100%)'
 }
+
 </script>
 
 <template>
@@ -169,24 +187,34 @@ function coverBackground(cover: string): string {
     <div class="mx-auto max-w-5xl px-4 py-6 md:py-10 space-y-8">
       <!-- 顶部返回 -->
       <Button variant="ghost" size="sm" as-child>
-        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+        <RouterLink :to="backPath" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
           <ArrowLeft class="size-4" />
-          {{ t('post.back') }}
+          {{ backLabel }}
         </RouterLink>
       </Button>
 
       <div class="grid min-w-0 grid-cols-1 items-start gap-8 xl:grid-cols-12">
-        <!-- 主文章内容区 -->
-        <article class="min-w-0 space-y-8" :class="tocItems.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'">
-          <header class="space-y-4">
-            <div v-if="post.category" class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1 text-xs font-medium text-primary px-2.5 py-1 rounded-full bg-primary/10">
-                <Folder class="size-3" />
-                {{ post.category }}
-              </span>
-            </div>
+          <!-- 主文章内容区 -->
+          <article class="min-w-0 space-y-8" :class="tocItems.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'">
+            <header class="space-y-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  v-if="post.origin === 'ai'"
+                  class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                >
+                  <Bot class="size-3" />
+                  {{ t('post.aiOriginal') }}
+                </span>
+                <span v-if="post.category" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                  <Folder class="size-3" />
+                  {{ post.category }}
+                </span>
+              </div>
 
-            <h1 class="text-3xl font-bold leading-tight tracking-tight md:text-4xl lg:text-5xl text-foreground">
+            <h1
+              class="text-3xl font-bold leading-tight tracking-tight text-foreground md:text-4xl"
+              :class="post.origin === 'ai' ? 'lg:text-4xl' : 'lg:text-5xl'"
+            >
               {{ post.title }}
             </h1>
 
@@ -207,6 +235,95 @@ function coverBackground(cover: string): string {
               </Badge>
             </div>
           </header>
+
+          <!-- AI 原稿的生成过程与下载操作 -->
+          <section
+            v-if="post.origin === 'ai'"
+            class="overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.03]"
+          >
+            <div class="flex flex-col gap-4 border-b border-primary/10 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                  <Sparkles class="size-4 text-primary" />
+                  <span>{{ t('post.aiOriginal') }}</span>
+                  <span class="rounded-full border border-border px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+                    {{ t('post.aiUnreviewed') }}
+                  </span>
+                </div>
+                <p class="max-w-2xl text-xs leading-6 text-muted-foreground">
+                  {{ t('post.aiNotice') }}
+                </p>
+              </div>
+
+              <div class="flex flex-col gap-2 lg:shrink-0 lg:items-end">
+                <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                  <Download class="size-3.5 text-primary" />
+                  {{ t('post.downloadGroup') }}
+                </span>
+                <div class="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" as-child>
+                    <a :href="markdownDownloadUrl" :download="`${post.slug}.md`">
+                      <Download class="size-3.5" />
+                      {{ t('post.downloadMarkdown') }}
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" as-child>
+                    <a :href="recordDownloadUrl" :download="`${post.slug}-generation-record.md`">
+                      <FileDown class="size-3.5" />
+                      {{ t('post.downloadRecord') }}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid min-w-0 md:grid-cols-2">
+              <div class="min-w-0 border-b border-primary/10 p-4 sm:p-5 md:border-b-0 md:border-r">
+                <div class="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <Sparkles class="size-3.5 text-primary" />
+                  {{ t('post.prompt') }}
+                </div>
+                <pre class="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/60 p-3 text-xs leading-6 text-foreground">{{ post.prompt || t('post.noPrompt') }}</pre>
+              </div>
+
+              <div class="min-w-0 p-4 sm:p-5">
+                <div class="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <MessageSquareText class="size-3.5 text-primary" />
+                  {{ t('post.conversationSummary') }}
+                </div>
+                <p class="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                  {{ post.conversationSummary || t('post.noConversation') }}
+                </p>
+                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
+                  <span v-if="post.model">{{ t('post.generatedBy') }}：{{ post.model }}</span>
+                  <span>{{ t('post.conversationCount', { n: post.conversation.length }) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <details v-if="post.conversation.length > 0" class="border-t border-primary/10">
+              <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs font-medium text-foreground hover:bg-muted/40 sm:px-5">
+                <MessageSquareText class="size-3.5 text-primary" />
+                {{ t('post.conversation') }}
+                <span class="text-muted-foreground">({{ post.conversation.length }})</span>
+              </summary>
+              <div class="space-y-4 border-t border-primary/10 px-4 py-4 sm:px-5">
+                <div
+                  v-for="(turn, index) in post.conversation"
+                  :key="`${turn.role}-${index}`"
+                  class="border-l-2 pl-3 sm:pl-4"
+                  :class="turn.role === 'user' ? 'border-foreground/30' : 'border-primary/50'"
+                >
+                  <div class="mb-1 text-[11px] font-semibold text-muted-foreground">
+                    {{ turn.role === 'user' ? '我' : 'AI' }}
+                  </div>
+                  <p class="whitespace-pre-wrap text-sm leading-7 text-foreground/85">
+                    {{ turn.content }}
+                  </p>
+                </div>
+              </div>
+            </details>
+          </section>
 
           <!-- 窄屏内嵌目录 (TOC) -->
           <div
@@ -304,9 +421,9 @@ function coverBackground(cover: string): string {
 
       <div class="pt-2">
         <Button variant="ghost" size="sm" as-child>
-          <RouterLink to="/" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+          <RouterLink :to="backPath" class="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
             <ArrowLeft class="size-4" />
-            {{ t('post.back') }}
+            {{ backLabel }}
           </RouterLink>
         </Button>
       </div>

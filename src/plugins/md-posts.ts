@@ -14,12 +14,22 @@ export interface Post {
   title: string
   excerpt: string
   contentHtml: string // markdown 编译后的 HTML
+  contentMarkdown: string // 原始 Markdown 正文，用于下载
   date: string // 'YYYY-MM-DD'（frontmatter 的 published）
   tags: string[]
   category: string
   draft: boolean
   readingTime: number
   cover: string // frontmatter 的 image，可能为 ''
+  origin: 'human' | 'ai' | 'mixed'
+  editorialStatus: 'polished' | 'raw' | 'edited'
+  model: string
+  prompt: string
+  conversationSummary: string
+  conversation: Array<{
+    role: 'user' | 'assistant'
+    content: string
+  }>
 }
 
 const VIRTUAL_ID = 'virtual:posts'
@@ -101,6 +111,39 @@ interface Frontmatter {
   category?: string
   draft?: boolean
   lang?: string
+  origin?: string
+  editorialStatus?: string
+  model?: string
+  prompt?: string
+  conversationSummary?: string
+  conversation?: unknown
+}
+
+function normalizeText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeOrigin(value: unknown): Post['origin'] {
+  return value === 'ai' || value === 'mixed' ? value : 'human'
+}
+
+function normalizeEditorialStatus(value: unknown): Post['editorialStatus'] {
+  return value === 'raw' || value === 'edited' ? value : 'polished'
+}
+
+function normalizeConversation(value: unknown): Post['conversation'] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((turn) => {
+    if (!turn || typeof turn !== 'object') return []
+    const item = turn as Record<string, unknown>
+    const content = normalizeText(item.content)
+    if (!content) return []
+    return [{
+      role: item.role === 'assistant' ? 'assistant' as const : 'user' as const,
+      content,
+    }]
+  })
 }
 
 function parsePost(filePath: string): Post {
@@ -116,17 +159,88 @@ function parsePost(filePath: string): Post {
   const draft = Boolean(fm.draft)
   const date = toDateString(fm.published)
   const contentHtml = md.render(content)
+  const origin = normalizeOrigin(fm.origin)
   return {
     slug,
     title,
     excerpt: description || title,
     contentHtml,
+    contentMarkdown: content,
     date,
     tags,
     category,
     draft,
     readingTime: calcReadingTime(content),
     cover: image,
+    origin,
+    editorialStatus: normalizeEditorialStatus(fm.editorialStatus),
+    model: normalizeText(fm.model),
+    prompt: normalizeText(fm.prompt),
+    conversationSummary: normalizeText(fm.conversationSummary),
+    conversation: normalizeConversation(fm.conversation),
+  }
+}
+
+function buildMarkdownDownload(post: Post): string {
+  const frontmatter = [
+    '---',
+    `title: ${JSON.stringify(post.title)}`,
+    `published: ${post.date}`,
+    `description: ${JSON.stringify(post.excerpt)}`,
+    `tags: ${JSON.stringify(post.tags)}`,
+    `category: ${JSON.stringify(post.category)}`,
+    `origin: ${post.origin}`,
+    `editorialStatus: ${post.editorialStatus}`,
+    '---',
+    '',
+  ].join('\n')
+
+  return `${frontmatter}${post.contentMarkdown.trim()}\n`
+}
+
+function buildRecordDownload(post: Post): string {
+  const lines = [
+    `# ${post.title}：生成记录`,
+    '',
+    `- 来源：${post.origin === 'ai' ? 'AI 生成' : post.origin}`,
+    `- 编辑状态：${post.editorialStatus === 'raw' ? '未人工校订' : post.editorialStatus}`,
+  ]
+
+  if (post.model) lines.push(`- 模型：${post.model}`)
+  lines.push('', '## 初始提示词', '', post.prompt || '未记录初始提示词')
+  lines.push('', '## 对话摘要', '', post.conversationSummary || '暂无关键对话记录')
+  lines.push('', '## 关键对话', '')
+
+  if (post.conversation.length === 0) {
+    lines.push('暂无关键对话记录')
+  } else {
+    post.conversation.forEach((turn, index) => {
+      lines.push(
+        `### ${index + 1}. ${turn.role === 'user' ? '我' : 'AI'}`,
+        '',
+        turn.content,
+        '',
+      )
+    })
+  }
+
+  return `${lines.join('\n').trim()}\n`
+}
+
+function writeDownloadFiles(posts: Post[], publicDir: string): void {
+  const aiPosts = posts.filter((post) => !post.draft && post.origin === 'ai')
+  if (aiPosts.length === 0) return
+
+  const downloadsDir = path.join(publicDir, 'downloads')
+  fs.mkdirSync(downloadsDir, { recursive: true })
+
+  for (const post of aiPosts) {
+    fs.writeFileSync(path.join(downloadsDir, `${post.slug}.md`), buildMarkdownDownload(post), 'utf-8')
+    fs.writeFileSync(
+      path.join(downloadsDir, `${post.slug}-generation-record.md`),
+      buildRecordDownload(post),
+      'utf-8',
+    )
   }
 }
 
@@ -175,7 +289,7 @@ export interface SearchIndexEntry {
 /** 非草稿文章生成搜索索引条目 */
 function buildSearchIndex(posts: Post[]): SearchIndexEntry[] {
   return posts
-    .filter((p) => !p.draft)
+    .filter((p) => !p.draft && p.origin !== 'ai')
     .map((p) => ({
       slug: p.slug,
       title: p.title,
@@ -205,6 +319,7 @@ function escapeXml(s: string): string {
 function buildRss(posts: Post[]): string {
   const base = SITE.baseUrl.replace(/\/$/, '')
   const items = posts
+    .filter((p) => p.origin !== 'ai')
     .map(
       (p) => `  <item>
     <title>${escapeXml(p.title)}</title>
@@ -230,6 +345,7 @@ ${items}
 function buildSitemap(posts: Post[]): string {
   const base = SITE.baseUrl.replace(/\/$/, '')
   const urls = posts
+    .filter((p) => p.origin !== 'ai')
     .map(
       (p) => `  <url>
     <loc>${base}/post/${encodeURI(p.slug)}</loc>
@@ -259,6 +375,7 @@ Sitemap: ${base}/sitemap.xml
 export function mdPosts(): Plugin {
   let postsDir = ''
   let publicDir = ''
+  let isBuild = false
 
   return {
     name: 'md-posts',
@@ -267,12 +384,14 @@ export function mdPosts(): Plugin {
     configResolved(config) {
       postsDir = path.resolve(config.root, 'src/content/posts')
       publicDir = config.publicDir
+      isBuild = config.command === 'build'
     },
 
     buildStart() {
       // 构建/启动时生成搜索索引（dev 下也会触发，供 /search-index.json 访问）
       if (publicDir) {
         writeSearchIndex(postsDir, publicDir)
+        if (!isBuild) writeDownloadFiles(loadPosts(postsDir), publicDir)
       }
     },
 
@@ -296,6 +415,7 @@ export function mdPosts(): Plugin {
         // 同时重写搜索索引
         if (publicDir) {
           writeSearchIndex(postsDir, publicDir)
+          if (!isBuild) writeDownloadFiles(loadPosts(postsDir), publicDir)
         }
         invalidatePostsModule(ctx.server)
         return []
@@ -313,6 +433,7 @@ export function mdPosts(): Plugin {
         if (isPostFile(file, postsDir)) {
           if (publicDir) {
             writeSearchIndex(postsDir, publicDir)
+            if (!isBuild) writeDownloadFiles(loadPosts(postsDir), publicDir)
           }
           invalidatePostsModule(server)
         }
@@ -329,6 +450,20 @@ export function mdPosts(): Plugin {
       this.emitFile({ type: 'asset', fileName: 'rss.xml', source: buildRss(posts) })
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemap(posts) })
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: buildRobots() })
+      posts
+        .filter((p) => p.origin === 'ai')
+        .forEach((post) => {
+          this.emitFile({
+            type: 'asset',
+            fileName: `downloads/${post.slug}.md`,
+            source: buildMarkdownDownload(post),
+          })
+          this.emitFile({
+            type: 'asset',
+            fileName: `downloads/${post.slug}-generation-record.md`,
+            source: buildRecordDownload(post),
+          })
+        })
     },
   }
 }
