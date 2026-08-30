@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Calendar, FileText, ArrowRight } from 'lucide-vue-next'
+import { ArrowRight, Bot, Calendar, FileText } from 'lucide-vue-next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getAllPosts, formatDate, type Post } from '@/data/posts'
@@ -49,6 +49,24 @@ const totalPosts = computed(() => posts.length)
           <span>{{ t('archive.description') || `共收录 ${totalPosts} 篇文章` }}</span>
         </p>
       </div>
+
+      <RouterLink
+        to="/archive/ai-lab"
+        class="group flex min-w-0 items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/[0.03] p-4 transition-colors hover:border-primary/40 hover:bg-primary/[0.06] sm:p-5"
+      >
+        <div class="flex min-w-0 items-start gap-3">
+          <Bot class="mt-0.5 size-5 shrink-0 text-primary" />
+          <div class="min-w-0 space-y-1">
+            <h2 class="text-sm font-semibold text-foreground group-hover:text-primary sm:text-base">
+              {{ t('aiLab.title') }}
+            </h2>
+            <p class="line-clamp-2 text-xs leading-6 text-muted-foreground sm:text-sm">
+              {{ t('aiLab.description') }}
+            </p>
+          </div>
+        </div>
+        <ArrowRight class="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+      </RouterLink>
 
       <!-- 时间轴列表 -->
       <div v-if="yearGroups.length > 0" class="space-y-10">

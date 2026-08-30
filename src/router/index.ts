@@ -18,14 +18,18 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
-    path: '/ai-lab',
-    name: 'ai-lab',
-    component: AiLabView,
-  },
-  {
     path: '/archive',
     name: 'archive',
     component: () => import('@/views/ArchiveView.vue'),
+  },
+  {
+    path: '/archive/ai-lab',
+    name: 'archive-ai-lab',
+    component: AiLabView,
+  },
+  {
+    path: '/ai-lab',
+    redirect: '/archive/ai-lab',
   },
   {
     path: '/friends',

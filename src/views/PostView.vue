@@ -28,7 +28,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
-const backPath = computed(() => post.value?.origin === 'ai' ? '/ai-lab' : '/')
+const backPath = computed(() => post.value?.origin === 'ai' ? '/archive/ai-lab' : '/')
 const backLabel = computed(() => post.value?.origin === 'ai' ? t('post.backAiLab') : t('post.back'))
 const downloadBase = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/downloads`
 const markdownDownloadUrl = computed(() => post.value ? `${downloadBase}/${encodeURIComponent(post.value.slug)}.md` : '')

@@ -10,7 +10,6 @@ const messages: Record<Locale, MessageDict> = {
   zh: {
     'nav.home': '首页',
     'nav.archive': '归档',
-    'nav.aiLab': 'AI 实验室',
     'nav.friends': '友链',
     'nav.about': '关于',
     'nav.search': '搜索',
@@ -76,7 +75,6 @@ const messages: Record<Locale, MessageDict> = {
   en: {
     'nav.home': 'Home',
     'nav.archive': 'Archive',
-    'nav.aiLab': 'AI Lab',
     'nav.friends': 'Friends',
     'nav.about': 'About',
     'nav.search': 'Search',
