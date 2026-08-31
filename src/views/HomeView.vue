@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
@@ -12,6 +12,7 @@ const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
 const jumpInput = ref('')
 const mounted = ref(false)
+const viewActive = ref(false)
 const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 const { width: trackWidth, height: trackHeight } = useElementSize(trackRef)
 
@@ -19,6 +20,10 @@ const PAGE_GAP = 16
 const PAGE_MAX_WIDTH = 1280
 const CARD_MIN_WIDTH = 340
 const CARD_MIN_HEIGHT = 248
+const HOME_PAGE_STORAGE_KEY = 'fulieblog:home-page-index'
+
+let pageRestored = false
+let lastActivePerPage = 0
 
 interface LayoutConfig {
   cols: number
@@ -72,16 +77,60 @@ const pages = computed(() => {
   return result
 })
 
+function readStoredPage(): number {
+  if (typeof window === 'undefined') return 0
+
+  try {
+    const storedPage = Number.parseInt(window.sessionStorage.getItem(HOME_PAGE_STORAGE_KEY) || '', 10)
+    return Number.isInteger(storedPage) && storedPage >= 0 ? storedPage : 0
+  } catch {
+    return 0
+  }
+}
+
+function storePage(page: number) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.sessionStorage.setItem(HOME_PAGE_STORAGE_KEY, String(page))
+  } catch {
+    // Ignore storage restrictions; pagination still works in memory.
+  }
+}
+
 // 单页内部行数计算（1 行或 2 行）
 function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
-  if (!trackRef.value || pages.value.length === 0) return
+  const track = trackRef.value
+  if (!track || pages.value.length === 0) return
 
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
   currentPage.value = target
-  trackRef.value.scrollTo({
-    left: trackRef.value.clientWidth * target,
-    behavior,
-  })
+  const left = track.clientWidth * target
+
+  if (behavior === 'auto') {
+    // The track has scroll-smooth; override it for state restoration and resize reflow.
+    const previousScrollBehavior = track.style.scrollBehavior
+    track.style.scrollBehavior = 'auto'
+    track.scrollLeft = left
+    track.style.scrollBehavior = previousScrollBehavior
+    return
+  }
+
+  track.scrollTo({ left, behavior })
+}
+
+function restoreStoredPage() {
+  if (
+    pageRestored
+    || !mounted.value
+    || !trackRef.value
+    || !trackWidth.value
+    || !trackHeight.value
+  ) return
+
+  pageRestored = true
+  lastActivePerPage = layout.value.perPage
+  scrollToIndex(readStoredPage(), 'auto')
 }
 
 function handlePrev() {
@@ -120,9 +169,11 @@ function onWheel(e: WheelEvent) {
 // 滚动时同步当前页（节流）
 let scrollRaf: number | null = null
 function onScroll() {
+  if (!viewActive.value) return
   if (scrollRaf) return
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = null
+    if (!viewActive.value) return
     const track = trackRef.value
     if (!track || !track.clientWidth || pages.value.length === 0) return
     const newPage = Math.round(track.scrollLeft / track.clientWidth)
@@ -134,24 +185,52 @@ function onScroll() {
 // Keep the first visible post stable when the number of columns or rows changes.
 watch(
   [() => layout.value.perPage, trackWidth],
-  async ([perPage, nextWidth], [previousPerPage]) => {
-    if (!mounted.value || !trackRef.value || !nextWidth) return
+  async ([perPage, nextWidth]) => {
+    if (!mounted.value || !viewActive.value || !pageRestored || !trackRef.value || !nextWidth) return
 
-    const oldPerPage = previousPerPage || perPage
+    const oldPerPage = lastActivePerPage || perPage
     const anchorIndex = Math.max(0, Math.min(posts.length - 1, currentPage.value * oldPerPage))
     const targetPage = Math.floor(anchorIndex / perPage)
 
     await nextTick()
+    if (!viewActive.value || !trackRef.value) return
+    lastActivePerPage = perPage
     scrollToIndex(targetPage, 'auto')
   },
 )
 
+watch(
+  [trackWidth, trackHeight],
+  async ([nextWidth, nextHeight]) => {
+    if (!nextWidth || !nextHeight) return
+    await nextTick()
+    restoreStoredPage()
+  },
+  { flush: 'post' },
+)
+
+watch(currentPage, (page) => {
+  if (mounted.value) storePage(page)
+})
+
 onMounted(() => {
   mounted.value = true
+  viewActive.value = true
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
+
+  nextTick(restoreStoredPage)
+})
+
+onActivated(() => {
+  viewActive.value = true
+})
+
+onDeactivated(() => {
+  viewActive.value = false
 })
 
 onUnmounted(() => {
+  storePage(currentPage.value)
   trackRef.value?.removeEventListener('wheel', onWheel)
   if (scrollRaf) cancelAnimationFrame(scrollRaf)
 })

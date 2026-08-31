@@ -184,7 +184,9 @@ const currentYear = new Date().getFullYear()
       <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <RouterView v-slot="{ Component }">
           <Transition name="fade" mode="out-in">
-            <component :is="Component" />
+            <KeepAlive include="HomeView">
+              <component :is="Component" />
+            </KeepAlive>
           </Transition>
         </RouterView>
       </div>
