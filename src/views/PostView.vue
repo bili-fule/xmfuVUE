@@ -181,6 +181,7 @@ function coverBackground(cover: string): string {
   <div
     v-if="post"
     ref="scrollContainerRef"
+    data-page-scroll="true"
     class="h-full min-h-0 min-w-0 overflow-y-auto relative scroll-smooth"
     @scroll="handleScroll"
   >
