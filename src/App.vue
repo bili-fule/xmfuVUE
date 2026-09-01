@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
 import { Moon, Sun, Home, Users, User, Search, Menu, X } from 'lucide-vue-next'
@@ -13,14 +13,7 @@ const toggleDark = useToggle(isDark)
 const route = useRoute()
 const searchOpen = ref(false)
 const mobileMenuOpen = ref(false)
-const mobileHeaderHidden = ref(false)
 const searchShortcut = ref('Ctrl K')
-
-let lastScrollTarget: HTMLElement | null = null
-let lastScrollTop = 0
-let scrollDirection = 0
-let scrollDirectionDistance = 0
-const SCROLL_DIRECTION_THRESHOLD = 4
 
 const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
@@ -44,43 +37,6 @@ function closeMobileMenu() {
   mobileMenuOpen.value = false
 }
 
-function handlePageScroll(event: Event) {
-  if (window.matchMedia('(min-width: 640px)').matches || mobileMenuOpen.value) return
-
-  const target = event.target
-  if (!(target instanceof HTMLElement) || target.dataset.pageScroll !== 'true') return
-
-  if (target !== lastScrollTarget) {
-    lastScrollTarget = target
-    lastScrollTop = target.scrollTop
-    scrollDirection = 0
-    scrollDirectionDistance = 0
-    mobileHeaderHidden.value = false
-    return
-  }
-
-  const nextScrollTop = target.scrollTop
-  const delta = nextScrollTop - lastScrollTop
-  lastScrollTop = nextScrollTop
-
-  if (nextScrollTop <= 8) {
-    scrollDirection = 0
-    scrollDirectionDistance = 0
-    mobileHeaderHidden.value = false
-  } else if (delta !== 0) {
-    const nextDirection = delta > 0 ? 1 : -1
-    if (nextDirection !== scrollDirection) {
-      scrollDirection = nextDirection
-      scrollDirectionDistance = 0
-    }
-
-    scrollDirectionDistance += Math.abs(delta)
-    if (scrollDirectionDistance >= SCROLL_DIRECTION_THRESHOLD) {
-      mobileHeaderHidden.value = nextDirection > 0
-    }
-  }
-}
-
 function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
@@ -92,14 +48,6 @@ function getSearchShortcut(): string {
   const platform = `${navigator.platform} ${navigator.userAgent}`
   return /Mac|iPhone|iPad|iPod/.test(platform) ? '⌘K' : 'Ctrl K'
 }
-
-watch(() => route.path, () => {
-  mobileHeaderHidden.value = false
-  lastScrollTarget = null
-  lastScrollTop = 0
-  scrollDirection = 0
-  scrollDirectionDistance = 0
-})
 
 onMounted(() => {
   searchShortcut.value = getSearchShortcut()
@@ -114,15 +62,9 @@ const currentYear = new Date().getFullYear()
 </script>
 
 <template>
-  <div
-    class="flex h-dvh min-w-0 flex-col overflow-hidden bg-background text-foreground transition-colors duration-300"
-    @scroll.capture="handlePageScroll"
-  >
+  <div class="flex h-dvh min-w-0 flex-col overflow-hidden bg-background text-foreground transition-colors duration-300">
     <!-- 顶部导航栏 -->
-    <header
-      class="relative z-50 w-full shrink-0 border-b bg-background/95 backdrop-blur transition-[margin] duration-200 ease-out supports-[backdrop-filter]:bg-background/60"
-      :class="mobileHeaderHidden ? '-mt-[calc(3.5rem+1px)] sm:mt-0' : ''"
-    >
+    <header class="relative z-50 w-full shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div class="mx-auto flex h-14 w-full max-w-5xl min-w-0 items-center gap-3 px-3 sm:px-6">
         <!-- Logo -->
         <RouterLink to="/" class="group flex min-w-0 shrink-0 items-center gap-2.5 text-base font-semibold tracking-tight sm:text-lg">

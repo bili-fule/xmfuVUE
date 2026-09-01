@@ -661,7 +661,6 @@ onUnmounted(() => {
     <!-- 多列横向分页；一列布局切换为上下滚动 -->
     <div
       ref="trackRef"
-      data-page-scroll="true"
       class="home-track min-h-0 flex flex-1 scroll-smooth scrollbar-hide"
       :class="isVerticalHome
         ? 'flex-col overflow-x-hidden overflow-y-auto snap-none touch-pan-y'
