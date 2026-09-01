@@ -60,6 +60,8 @@ const layout = computed<LayoutConfig>(() => {
   return { cols, rows, perPage: cols * rows }
 })
 
+const isVerticalHome = computed(() => layout.value.cols === 1)
+
 // 等宽 Grid 类
 const gridColsClass = computed(() => {
   if (layout.value.cols === 1) return 'grid-cols-1'
@@ -76,6 +78,23 @@ const pages = computed(() => {
   }
   return result
 })
+
+function formatTimelineDate(date: string | undefined): string {
+  return date ? date.slice(5).replace('-', '/') : ''
+}
+
+const pageTimeline = computed(() => pages.value.map((page, index) => {
+  const newestDate = formatTimelineDate(page[0]?.date)
+  const oldestDate = formatTimelineDate(page[page.length - 1]?.date)
+
+  return {
+    index,
+    count: page.length,
+    dateRange: newestDate === oldestDate ? newestDate : `${oldestDate} - ${newestDate}`,
+  }
+}))
+
+const activePageTimeline = computed(() => pageTimeline.value[currentPage.value])
 
 function readStoredPage(): number {
   if (typeof window === 'undefined') return 0
@@ -98,25 +117,42 @@ function storePage(page: number) {
   }
 }
 
-// 单页内部行数计算（1 行或 2 行）
+function getPageElement(index: number): HTMLElement | null {
+  return trackRef.value?.querySelector<HTMLElement>(`[data-home-page="${index}"]`) ?? null
+}
+
+function getVerticalPageTop(element: HTMLElement, track: HTMLElement): number {
+  const trackRect = track.getBoundingClientRect()
+  const pageRect = element.getBoundingClientRect()
+  return Math.max(0, track.scrollTop + pageRect.top - trackRect.top)
+}
+
+// 单页内部行数计算（1 行或 2 行）；一列布局改为纵向页面。
 function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
   const track = trackRef.value
   if (!track || pages.value.length === 0) return
 
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
+  const targetElement = isVerticalHome.value ? getPageElement(target) : null
+  if (isVerticalHome.value && !targetElement) return
+
   currentPage.value = target
-  const left = track.clientWidth * target
+  const position = isVerticalHome.value && targetElement
+    ? getVerticalPageTop(targetElement, track)
+    : track.clientWidth * target
 
   if (behavior === 'auto') {
     // The track has scroll-smooth; override it for state restoration and resize reflow.
     const previousScrollBehavior = track.style.scrollBehavior
     track.style.scrollBehavior = 'auto'
-    track.scrollLeft = left
+    if (isVerticalHome.value) track.scrollTop = position
+    else track.scrollLeft = position
     track.style.scrollBehavior = previousScrollBehavior
     return
   }
 
-  track.scrollTo({ left, behavior })
+  if (isVerticalHome.value) track.scrollTo({ top: position, behavior })
+  else track.scrollTo({ left: position, behavior })
 }
 
 function restoreStoredPage() {
@@ -147,11 +183,18 @@ function handleDirectJump() {
   jumpInput.value = ''
 }
 
+function handleTimelineInput(event: Event) {
+  const page = Number((event.target as HTMLInputElement).value)
+  if (Number.isInteger(page)) scrollToIndex(page, 'auto')
+}
+
 // wheel 节流：一次手势只翻一页
 let lastWheelTime = 0
 const WHEEL_COOLDOWN = 700
 
 function onWheel(e: WheelEvent) {
+  if (isVerticalHome.value) return
+
   // 让水平方向滚轮/触控板横向手势保持原生 snap 滚动
   const track = trackRef.value
   if (!track || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
@@ -175,8 +218,26 @@ function onScroll() {
     scrollRaf = null
     if (!viewActive.value) return
     const track = trackRef.value
-    if (!track || !track.clientWidth || pages.value.length === 0) return
-    const newPage = Math.round(track.scrollLeft / track.clientWidth)
+    if (!track || pages.value.length === 0) return
+
+    let newPage = 0
+    if (isVerticalHome.value) {
+      const pageElements = pages.value.map((_, index) => getPageElement(index)).filter((element): element is HTMLElement => Boolean(element))
+      const trackTop = track.getBoundingClientRect().top
+      const markerTop = trackTop + Math.min(96, track.clientHeight * 0.35)
+
+      pageElements.forEach((element, index) => {
+        if (element.getBoundingClientRect().top <= markerTop) newPage = index
+      })
+
+      if (track.scrollTop + track.clientHeight >= track.scrollHeight - 2) {
+        newPage = pages.value.length - 1
+      }
+    } else {
+      if (!track.clientWidth) return
+      newPage = Math.round(track.scrollLeft / track.clientWidth)
+    }
+
     currentPage.value = Math.max(0, Math.min(newPage, pages.value.length - 1))
   })
 }
@@ -184,8 +245,8 @@ function onScroll() {
 // 视口宽度变化时重新分页并归位到最近一页
 // Keep the first visible post stable when the number of columns or rows changes.
 watch(
-  [() => layout.value.perPage, trackWidth],
-  async ([perPage, nextWidth]) => {
+  [() => layout.value.perPage, () => isVerticalHome.value, trackWidth],
+  async ([perPage, , nextWidth]) => {
     if (!mounted.value || !viewActive.value || !pageRestored || !trackRef.value || !nextWidth) return
 
     const oldPerPage = lastActivePerPage || perPage
@@ -248,15 +309,81 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- 横向翻页轨道：section 满宽，确保每次 snap 和 clientWidth 滚动完全等宽对齐 -->
+    <!-- 一列布局：页面区域纵向滚动，选择条固定在滚动容器上方 -->
+    <nav
+      v-if="isVerticalHome && pages.length > 1"
+      class="home-mobile-timeline shrink-0 border-y bg-background/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      aria-label="首页页面导航"
+    >
+      <div class="mx-auto w-full max-w-7xl">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex min-w-0 items-center gap-2 text-xs">
+            <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+            <span class="truncate font-medium text-foreground">{{ activePageTimeline?.dateRange }}</span>
+            <span class="shrink-0 text-muted-foreground">{{ activePageTimeline?.count }} 篇</span>
+          </div>
+          <span class="shrink-0 font-mono text-xs font-semibold text-primary">
+            {{ currentPage + 1 }}<span class="px-0.5 text-muted-foreground/60">/</span>{{ pages.length }}
+          </span>
+        </div>
+
+        <div class="relative mt-2 h-6 px-0.5">
+          <div class="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2 gap-1">
+            <span
+              v-for="page in pageTimeline"
+              :key="`timeline-bar-${page.index}`"
+              class="min-w-0 flex-1 rounded-full transition-colors duration-200"
+              :class="page.index <= currentPage ? 'bg-primary' : 'bg-muted-foreground/20'"
+            />
+          </div>
+          <input
+            type="range"
+            min="0"
+            :max="pages.length - 1"
+            step="1"
+            :value="currentPage"
+            aria-label="选择首页页面"
+            :aria-valuetext="`第 ${currentPage + 1} 页，共 ${pages.length} 页`"
+            class="home-page-range"
+            @input="handleTimelineInput"
+          />
+        </div>
+
+        <div class="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+          <button
+            type="button"
+            class="min-w-0 truncate text-left transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
+            :aria-label="`第 1 页，${pageTimeline[0]?.dateRange ?? ''}`"
+            @click="scrollToIndex(0)"
+          >
+            {{ pageTimeline[0]?.dateRange }}
+          </button>
+          <span class="shrink-0">页面</span>
+          <button
+            type="button"
+            class="min-w-0 truncate text-right transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
+            :aria-label="`第 ${pages.length} 页，${pageTimeline[pages.length - 1]?.dateRange ?? ''}`"
+            @click="scrollToIndex(pages.length - 1)"
+          >
+            {{ pageTimeline[pages.length - 1]?.dateRange }}
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 多列横向分页；一列布局切换为上下滚动 -->
     <div
       ref="trackRef"
-      class="home-track min-h-0 flex flex-1 overflow-x-auto overflow-y-auto snap-x snap-mandatory scroll-smooth scrollbar-hide"
+      class="home-track min-h-0 flex flex-1 scroll-smooth scrollbar-hide"
+      :class="isVerticalHome
+        ? 'flex-col overflow-x-hidden overflow-y-auto snap-none touch-pan-y'
+        : 'overflow-x-auto overflow-y-auto snap-x snap-mandatory'"
       @scroll="onScroll"
     >
       <section
         v-for="(page, pageIndex) in pages"
         :key="`${layout.perPage}-${pageIndex}`"
+        :data-home-page="pageIndex"
         class="snap-start flex min-h-full h-auto w-full shrink-0 flex-col justify-start"
       >
         <!-- 内部居中限宽容器：justify-start 让 Grid 靠上，留白总是在下方 -->
@@ -285,7 +412,7 @@ onUnmounted(() => {
 
     <!-- 底部分页条：页码数字按钮 + 前后步进 + 快速跳转输入框 -->
     <nav
-      v-if="pages.length > 1"
+      v-if="pages.length > 1 && !isVerticalHome"
       class="shrink-0 flex items-center justify-center gap-1.5 sm:gap-2.5 py-2.5 sm:py-3 px-4 select-none"
       aria-label="分页导航"
     >
@@ -381,5 +508,26 @@ onUnmounted(() => {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.home-page-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: grab;
+  opacity: 0;
+  outline: none;
+}
+
+.home-page-range:active {
+  cursor: grabbing;
+}
+
+.home-page-range:focus-visible {
+  border-radius: 9999px;
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 </style>
