@@ -13,6 +13,10 @@ const currentPage = ref(0)
 const jumpInput = ref('')
 const mounted = ref(false)
 const viewActive = ref(false)
+const activeTimelineKey = ref(posts[0] ? getTimelineKey(posts[0].date) : '')
+const activeTimelineDate = ref(posts[0]?.date ?? '')
+const selectedTimelineDate = ref(posts[0]?.date ?? '')
+const selectedTimelineYear = ref(posts[0]?.date?.slice(0, 4) ?? '')
 const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 const { width: trackWidth, height: trackHeight } = useElementSize(trackRef)
 
@@ -69,8 +73,7 @@ const gridColsClass = computed(() => {
   return 'grid-cols-3'
 })
 
-// 分页切片计算：
-// 严格按容量整页打包（宽屏6、中屏4、窄屏2），满页全部填满，余数仅保留在末页
+// 文章按布局容量分组；移动端的时间导航使用独立的年月分组。
 const pages = computed(() => {
   const result: Post[][] = []
   for (let i = 0; i < posts.length; i += layout.value.perPage) {
@@ -79,22 +82,114 @@ const pages = computed(() => {
   return result
 })
 
-function formatTimelineDate(date: string | undefined): string {
-  return date ? date.slice(5).replace('-', '/') : ''
+interface TimelineMonthGroup {
+  key: string
+  year: string
+  month: number
+  count: number
+  posts: Post[]
+  newestDate: string
+  oldestDate: string
 }
 
-const pageTimeline = computed(() => pages.value.map((page, index) => {
-  const newestDate = formatTimelineDate(page[0]?.date)
-  const oldestDate = formatTimelineDate(page[page.length - 1]?.date)
+interface TimelineSegment {
+  group: TimelineMonthGroup
+  width: number
+  center: number
+}
 
-  return {
-    index,
-    count: page.length,
-    dateRange: newestDate === oldestDate ? newestDate : `${oldestDate} - ${newestDate}`,
-  }
-}))
+function getTimelineKey(date: string): string {
+  return date.slice(0, 7)
+}
 
-const activePageTimeline = computed(() => pageTimeline.value[currentPage.value])
+function formatFullDate(date: string | undefined): string {
+  if (!date) return ''
+
+  const [year, month, day] = date.split('-')
+  return `${year}年${Number(month)}月${Number(day)}日`
+}
+
+function getDateTimestamp(date: string): number {
+  const timestamp = Date.parse(`${date}T00:00:00Z`)
+  return Number.isFinite(timestamp) ? timestamp : Number.NaN
+}
+
+const timelineGroups = computed<TimelineMonthGroup[]>(() => {
+  const grouped = new Map<string, Post[]>()
+
+  posts.forEach((post) => {
+    const key = getTimelineKey(post.date)
+    const groupPosts = grouped.get(key) ?? []
+    groupPosts.push(post)
+    grouped.set(key, groupPosts)
+  })
+
+  return Array.from(grouped.entries()).map(([key, groupPosts]) => ({
+    key,
+    year: key.slice(0, 4),
+    month: Number(key.slice(5, 7)),
+    count: groupPosts.length,
+    posts: groupPosts,
+    newestDate: groupPosts[0]?.date ?? '',
+    oldestDate: groupPosts[groupPosts.length - 1]?.date ?? '',
+  }))
+})
+
+const timelineGroupBySlug = computed(() => {
+  const groups = new Map<string, TimelineMonthGroup>()
+
+  timelineGroups.value.forEach((group) => {
+    group.posts.forEach((post) => groups.set(post.slug, group))
+  })
+
+  return groups
+})
+
+const timelineYears = computed(() => Array.from(
+  new Set(timelineGroups.value.map((group) => group.year)),
+))
+
+const activeTimelineGroup = computed(() =>
+  timelineGroups.value.find((group) => group.key === activeTimelineKey.value)
+  ?? timelineGroups.value[0],
+)
+
+const visibleTimelineGroups = computed(() => {
+  const year = selectedTimelineYear.value || activeTimelineGroup.value?.year
+  return timelineGroups.value.filter((group) => group.year === year)
+})
+
+const timelineSegments = computed<TimelineSegment[]>(() => {
+  const groups = visibleTimelineGroups.value
+  if (groups.length === 0) return []
+
+  const weights = groups.map((group, index) => {
+    const newerGroup = groups[index - 1]
+    const gapDays = newerGroup
+      ? Math.abs(getDateTimestamp(newerGroup.newestDate) - getDateTimestamp(group.newestDate)) / 86_400_000
+      : 30
+    const timeWeight = Number.isFinite(gapDays) ? Math.min(3, Math.log1p(Math.max(gapDays, 1) / 30)) : 1
+    const articleWeight = Math.min(2, Math.log1p(group.count))
+    return 1 + timeWeight * 0.45 + articleWeight * 0.35
+  })
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+
+  let offset = 0
+  return groups.map((group, index) => {
+    const width = (weights[index] / totalWeight) * 100
+    const segment = { group, width, center: offset + width / 2 }
+    offset += width
+    return segment
+  })
+})
+
+const activeTimelinePosition = computed(() => {
+  const segment = timelineSegments.value.find(({ group }) => group.key === activeTimelineKey.value)
+  return segment?.center ?? 50
+})
+
+const timelineMinDate = computed(() => posts[posts.length - 1]?.date ?? '')
+const timelineMaxDate = computed(() => posts[0]?.date ?? '')
 
 function readStoredPage(): number {
   if (typeof window === 'undefined') return 0
@@ -121,7 +216,12 @@ function getPageElement(index: number): HTMLElement | null {
   return trackRef.value?.querySelector<HTMLElement>(`[data-home-page="${index}"]`) ?? null
 }
 
-function getVerticalPageTop(element: HTMLElement, track: HTMLElement): number {
+function getPostElement(slug: string): HTMLElement | null {
+  return Array.from(trackRef.value?.querySelectorAll<HTMLElement>('[data-home-post]') ?? [])
+    .find((element) => element.dataset.homePost === slug) ?? null
+}
+
+function getVerticalElementTop(element: HTMLElement, track: HTMLElement): number {
   const trackRect = track.getBoundingClientRect()
   const pageRect = element.getBoundingClientRect()
   return Math.max(0, track.scrollTop + pageRect.top - trackRect.top)
@@ -138,7 +238,7 @@ function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
 
   currentPage.value = target
   const position = isVerticalHome.value && targetElement
-    ? getVerticalPageTop(targetElement, track)
+    ? getVerticalElementTop(targetElement, track)
     : track.clientWidth * target
 
   if (behavior === 'auto') {
@@ -184,8 +284,95 @@ function handleDirectJump() {
 }
 
 function handleTimelineInput(event: Event) {
-  const page = Number((event.target as HTMLInputElement).value)
-  if (Number.isInteger(page)) scrollToIndex(page, 'auto')
+  const position = Number((event.target as HTMLInputElement).value)
+  if (!Number.isFinite(position) || timelineSegments.value.length === 0) return
+
+  const target = timelineSegments.value.reduce((closest, segment) =>
+    Math.abs(segment.center - position) < Math.abs(closest.center - position) ? segment : closest,
+  )
+  scrollToTimelineGroup(target.group, 'auto')
+}
+
+function findClosestPost(date: string): Post | undefined {
+  const firstPost = posts[0]
+  if (!firstPost) return undefined
+
+  const targetTimestamp = getDateTimestamp(date)
+  if (!Number.isFinite(targetTimestamp)) return firstPost
+
+  return posts.reduce((closest, post) => {
+    const closestDistance = Math.abs(getDateTimestamp(closest.date) - targetTimestamp)
+    const postDistance = Math.abs(getDateTimestamp(post.date) - targetTimestamp)
+    return postDistance < closestDistance ? post : closest
+  }, firstPost)
+}
+
+function scrollToTimelinePost(post: Post, behavior: ScrollBehavior = 'smooth') {
+  const track = trackRef.value
+  const element = getPostElement(post.slug)
+  if (!track || !element || !isVerticalHome.value) return
+
+  const pageElement = element.closest<HTMLElement>('[data-home-page]')
+  const pageIndex = Number(pageElement?.dataset.homePage ?? '')
+  if (Number.isInteger(pageIndex)) currentPage.value = pageIndex
+
+  const group = timelineGroupBySlug.value.get(post.slug)
+  if (group) {
+    activeTimelineKey.value = group.key
+    activeTimelineDate.value = post.date
+    selectedTimelineDate.value = post.date
+    selectedTimelineYear.value = group.year
+  }
+
+  const position = getVerticalElementTop(element, track)
+  if (behavior === 'auto') {
+    const previousScrollBehavior = track.style.scrollBehavior
+    track.style.scrollBehavior = 'auto'
+    track.scrollTop = position
+    track.style.scrollBehavior = previousScrollBehavior
+    return
+  }
+
+  track.scrollTo({ top: position, behavior })
+}
+
+function scrollToTimelineGroup(group: TimelineMonthGroup, behavior: ScrollBehavior = 'smooth') {
+  const post = group.posts[0]
+  if (post) scrollToTimelinePost(post, behavior)
+}
+
+function handleTimelineYearChange() {
+  const group = timelineGroups.value.find(({ year }) => year === selectedTimelineYear.value)
+  if (group) scrollToTimelineGroup(group)
+}
+
+function handleTimelineDateChange() {
+  const post = findClosestPost(selectedTimelineDate.value)
+  if (post) scrollToTimelinePost(post)
+}
+
+function updateTimelineFromScroll(track: HTMLElement, markerTop: number) {
+  const postElements = Array.from(track.querySelectorAll<HTMLElement>('[data-home-post]'))
+  if (postElements.length === 0) return
+
+  let visiblePostElement = postElements[0]
+  postElements.forEach((element) => {
+    if (element.getBoundingClientRect().top <= markerTop) visiblePostElement = element
+  })
+
+  if (track.scrollTop + track.clientHeight >= track.scrollHeight - 2) {
+    visiblePostElement = postElements[postElements.length - 1]
+  }
+
+  const slug = visiblePostElement.dataset.homePost
+  const group = slug ? timelineGroupBySlug.value.get(slug) : undefined
+  const post = slug ? posts.find((item) => item.slug === slug) : undefined
+  if (!group || !post) return
+
+  activeTimelineKey.value = group.key
+  activeTimelineDate.value = post.date
+  selectedTimelineDate.value = post.date
+  selectedTimelineYear.value = group.year
 }
 
 // wheel 节流：一次手势只翻一页
@@ -233,6 +420,8 @@ function onScroll() {
       if (track.scrollTop + track.clientHeight >= track.scrollHeight - 2) {
         newPage = pages.value.length - 1
       }
+
+      updateTimelineFromScroll(track, markerTop)
     } else {
       if (!track.clientWidth) return
       newPage = Math.round(track.scrollLeft / track.clientWidth)
@@ -279,11 +468,25 @@ onMounted(() => {
   viewActive.value = true
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
 
-  nextTick(restoreStoredPage)
+  nextTick(() => {
+    restoreStoredPage()
+    const track = trackRef.value
+    if (track && isVerticalHome.value) {
+      const markerTop = track.getBoundingClientRect().top + Math.min(96, track.clientHeight * 0.35)
+      updateTimelineFromScroll(track, markerTop)
+    }
+  })
 })
 
 onActivated(() => {
   viewActive.value = true
+  nextTick(() => {
+    const track = trackRef.value
+    if (track && isVerticalHome.value) {
+      const markerTop = track.getBoundingClientRect().top + Math.min(96, track.clientHeight * 0.35)
+      updateTimelineFromScroll(track, markerTop)
+    }
+  })
 })
 
 onDeactivated(() => {
@@ -309,65 +512,96 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- 一列布局：页面区域纵向滚动，选择条固定在滚动容器上方 -->
+    <!-- 一列布局：文章区域连续滚动，时间导航固定在滚动容器上方 -->
     <nav
-      v-if="isVerticalHome && pages.length > 1"
-      class="home-mobile-timeline shrink-0 border-y bg-background/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-      aria-label="首页页面导航"
+      v-if="isVerticalHome && timelineGroups.length > 0"
+      class="home-mobile-timeline shrink-0 border-y bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      aria-label="首页时间导航"
     >
       <div class="mx-auto w-full max-w-7xl">
         <div class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-2 text-xs">
+          <div class="flex min-w-0 items-baseline gap-2 text-xs">
             <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-            <span class="truncate font-medium text-foreground">{{ activePageTimeline?.dateRange }}</span>
-            <span class="shrink-0 text-muted-foreground">{{ activePageTimeline?.count }} 篇</span>
+            <time
+              :datetime="activeTimelineDate"
+              class="truncate text-sm font-semibold tracking-tight text-foreground"
+            >
+              {{ formatFullDate(activeTimelineDate) }}
+            </time>
+            <span class="shrink-0 text-muted-foreground">{{ activeTimelineGroup?.count }} 篇</span>
           </div>
-          <span class="shrink-0 font-mono text-xs font-semibold text-primary">
-            {{ currentPage + 1 }}<span class="px-0.5 text-muted-foreground/60">/</span>{{ pages.length }}
-          </span>
+          <span class="shrink-0 text-[10px] text-muted-foreground">共 {{ posts.length }} 篇</span>
         </div>
 
-        <div class="relative mt-2 h-6 px-0.5">
-          <div class="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2 gap-1">
+        <div class="mt-1.5 flex items-center gap-2">
+          <select
+            v-model="selectedTimelineYear"
+            class="h-8 w-[6.5rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground shadow-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            aria-label="选择年份"
+            @change="handleTimelineYearChange"
+          >
+            <option
+              v-for="year in timelineYears"
+              :key="year"
+              :value="year"
+            >
+              {{ year }}年
+            </option>
+          </select>
+          <input
+            v-model="selectedTimelineDate"
+            type="date"
+            :min="timelineMinDate"
+            :max="timelineMaxDate"
+            aria-label="按日期定位"
+            class="h-8 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-xs text-foreground shadow-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            @change="handleTimelineDateChange"
+          />
+        </div>
+
+        <div class="relative mt-1.5 h-6 px-0.5">
+          <div class="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-muted-foreground/15">
             <span
-              v-for="page in pageTimeline"
-              :key="`timeline-bar-${page.index}`"
-              class="min-w-0 flex-1 rounded-full transition-colors duration-200"
-              :class="page.index <= currentPage ? 'bg-primary' : 'bg-muted-foreground/20'"
+              v-for="segment in timelineSegments"
+              :key="`timeline-segment-${segment.group.key}`"
+              class="h-full shrink-0 transition-colors duration-200"
+              :class="segment.group.key === activeTimelineKey ? 'bg-primary' : 'bg-muted-foreground/25'"
+              :style="{ width: `${segment.width}%` }"
             />
           </div>
+          <div
+            class="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-4 ring-background transition-[left] duration-200"
+            :style="{ left: `${activeTimelinePosition}%` }"
+          />
           <input
             type="range"
             min="0"
-            :max="pages.length - 1"
+            max="100"
             step="1"
-            :value="currentPage"
-            aria-label="选择首页页面"
-            :aria-valuetext="`第 ${currentPage + 1} 页，共 ${pages.length} 页`"
+            :value="activeTimelinePosition"
+            aria-label="在时间轴上定位"
+            :aria-valuetext="formatFullDate(activeTimelineDate)"
             class="home-page-range"
             @input="handleTimelineInput"
           />
         </div>
 
-        <div class="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+        <div class="mt-0.5 flex items-start gap-1 overflow-hidden text-[10px] text-muted-foreground">
           <button
+            v-for="segment in timelineSegments"
+            :key="`timeline-label-${segment.group.key}`"
             type="button"
-            class="min-w-0 truncate text-left transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
-            :aria-label="`第 1 页，${pageTimeline[0]?.dateRange ?? ''}`"
-            @click="scrollToIndex(0)"
+            class="min-w-0 truncate text-center transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
+            :class="segment.group.key === activeTimelineKey ? 'font-semibold text-primary' : ''"
+            :style="{ width: `${segment.width}%` }"
+            :aria-current="segment.group.key === activeTimelineKey ? 'location' : undefined"
+            :aria-label="`${segment.group.year}年${segment.group.month}月，共 ${segment.group.count} 篇`"
+            @click="scrollToTimelineGroup(segment.group)"
           >
-            {{ pageTimeline[0]?.dateRange }}
-          </button>
-          <span class="shrink-0">页面</span>
-          <button
-            type="button"
-            class="min-w-0 truncate text-right transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
-            :aria-label="`第 ${pages.length} 页，${pageTimeline[pages.length - 1]?.dateRange ?? ''}`"
-            @click="scrollToIndex(pages.length - 1)"
-          >
-            {{ pageTimeline[pages.length - 1]?.dateRange }}
+            {{ segment.group.month }}月 · {{ segment.group.count }}
           </button>
         </div>
+
       </div>
     </nav>
 
@@ -402,6 +636,7 @@ onUnmounted(() => {
             <RouterLink
               v-for="post in page"
               :key="post.slug"
+              :data-home-post="post.slug"
               :to="`/post/${post.slug}`"
               class="group flex min-h-0 col-span-1 min-w-0 max-w-full"
             >
