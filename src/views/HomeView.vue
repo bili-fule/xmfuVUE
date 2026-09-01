@@ -1,34 +1,175 @@
 <script setup lang="ts">
-import { computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useElementSize, useWindowSize } from '@vueuse/core'
-import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
+import { useElementSize, useWindowSize, onClickOutside } from '@vueuse/core'
+import {
+  ChevronLeft,
+  ChevronRight,
+  CornerDownLeft,
+  Sparkles,
+  Layers,
+  Calendar,
+  History,
+  X,
+  ChevronDown,
+  Check,
+} from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import { getHomePosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
+import { t } from '@/i18n'
 
-const posts = getHomePosts()
+const allPosts = getHomePosts()
 const trackRef = ref<HTMLElement | null>(null)
 const currentPage = ref(0)
 const jumpInput = ref('')
 const mounted = ref(false)
 const viewActive = ref(false)
-const activeTimelineKey = ref(posts[0] ? getTimelineKey(posts[0].date) : '')
-const activeTimelineDate = ref(posts[0]?.date ?? '')
-const selectedTimelineDate = ref(posts[0]?.date ?? '')
-const selectedTimelineYear = ref(posts[0]?.date?.slice(0, 4) ?? '')
+
+// 筛选与抽屉状态
+// selectedFilterType: 'all' | 'ai' | 'category'
+const selectedFilterType = ref<'all' | 'ai' | 'category'>('all')
+const selectedCategory = ref<string>('')
+const categoryDropdownOpen = ref(false)
+const categoryDropdownRef = ref<HTMLElement | null>(null)
+const timelineDrawerOpen = ref(false)
+
+onClickOutside(categoryDropdownRef, () => {
+  categoryDropdownOpen.value = false
+})
+
 const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 const { width: trackWidth, height: trackHeight } = useElementSize(trackRef)
 
 const PAGE_GAP = 16
 const PAGE_MAX_WIDTH = 1280
 const CARD_MIN_WIDTH = 340
-const CARD_MIN_HEIGHT = 248
+const CARD_MIN_HEIGHT = 260
 const HOME_PAGE_STORAGE_KEY = 'fulieblog:home-page-index'
 
 let pageRestored = false
 let lastActivePerPage = 0
+
+// 分类统计
+const categories = computed(() => {
+  const catMap = new Map<string, number>()
+  allPosts.forEach((post) => {
+    if (post.category) {
+      catMap.set(post.category, (catMap.get(post.category) || 0) + 1)
+    }
+  })
+  return Array.from(catMap.entries()).map(([name, count]) => ({ name, count }))
+})
+
+const aiPostsCount = computed(() => allPosts.filter(p => p.origin === 'ai').length)
+
+// 年月分组结构（用于快速直达跳转抽屉）
+interface MonthArchive {
+  month: number
+  key: string
+  count: number
+  firstSlug: string
+}
+
+interface YearArchive {
+  year: string
+  count: number
+  months: MonthArchive[]
+}
+
+const archiveTimeline = computed<YearArchive[]>(() => {
+  const yearMap = new Map<string, Map<number, { count: number, firstSlug: string }>>()
+
+  filteredPosts.value.forEach((post) => {
+    if (!post.date) return
+    const year = post.date.slice(0, 4)
+    const month = Number(post.date.slice(5, 7))
+
+    if (!yearMap.has(year)) {
+      yearMap.set(year, new Map())
+    }
+    const monthMap = yearMap.get(year)!
+    if (!monthMap.has(month)) {
+      monthMap.set(month, { count: 1, firstSlug: post.slug })
+    } else {
+      monthMap.get(month)!.count += 1
+    }
+  })
+
+  return Array.from(yearMap.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([year, monthsMap]) => {
+      let total = 0
+      const months: MonthArchive[] = Array.from(monthsMap.entries())
+        .sort((a, b) => b[0] - a[0])
+        .map(([month, data]) => {
+          total += data.count
+          return {
+            month,
+            key: `${year}-${String(month).padStart(2, '0')}`,
+            count: data.count,
+            firstSlug: data.firstSlug,
+          }
+        })
+
+      return {
+        year,
+        count: total,
+        months,
+      }
+    })
+})
+
+// 根据筛选条件过滤文章
+const filteredPosts = computed(() => {
+  return allPosts.filter((post) => {
+    if (selectedFilterType.value === 'ai') {
+      return post.origin === 'ai'
+    }
+    if (selectedFilterType.value === 'category' && selectedCategory.value) {
+      return post.category === selectedCategory.value
+    }
+    return true
+  })
+})
+
+// 分类与类型选择切换
+function selectAll() {
+  selectedFilterType.value = 'all'
+  selectedCategory.value = ''
+  categoryDropdownOpen.value = false
+}
+
+function selectAi() {
+  selectedFilterType.value = 'ai'
+  selectedCategory.value = ''
+  categoryDropdownOpen.value = false
+}
+
+function selectSpecificCategory(cat: string) {
+  selectedFilterType.value = 'category'
+  selectedCategory.value = cat
+  categoryDropdownOpen.value = false
+}
+
+// 当前分类选择器展示的文本
+const currentFilterLabel = computed(() => {
+  if (selectedFilterType.value === 'ai') return t('filter.ai')
+  if (selectedFilterType.value === 'category' && selectedCategory.value) return selectedCategory.value
+  return t('filter.allCategories')
+})
+
+// 移动端精准直达跳转定位
+function jumpToPost(slug: string) {
+  timelineDrawerOpen.value = false
+  nextTick(() => {
+    const el = document.getElementById(`post-${slug}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
 
 interface LayoutConfig {
   cols: number
@@ -36,8 +177,6 @@ interface LayoutConfig {
   perPage: number
 }
 
-// Derive columns from the actual track width so embedded layouts and
-// narrow viewports use the same card sizing rules.
 function getPageContentWidth(width: number): number {
   if (!width) return 0
   const padding = width >= 768 ? 64 : 32
@@ -60,7 +199,6 @@ const layout = computed<LayoutConfig>(() => {
     ? trackHeight.value || Math.max(viewportHeight.value - 160, CARD_MIN_HEIGHT)
     : 640
   const cols = getColumnCount(width)
-  // Keep mobile home as one continuous article stream regardless of viewport height.
   const rows = cols === 1 ? 1 : height >= CARD_MIN_HEIGHT * 2 + PAGE_GAP ? 2 : 1
 
   return { cols, rows, perPage: cols * rows }
@@ -75,123 +213,15 @@ const gridColsClass = computed(() => {
   return 'grid-cols-3'
 })
 
-// 文章按布局容量分组；移动端的时间导航使用独立的年月分组。
+// 文章按布局容量分页
 const pages = computed(() => {
   const result: Post[][] = []
-  for (let i = 0; i < posts.length; i += layout.value.perPage) {
-    result.push(posts.slice(i, i + layout.value.perPage))
+  const list = filteredPosts.value
+  for (let i = 0; i < list.length; i += layout.value.perPage) {
+    result.push(list.slice(i, i + layout.value.perPage))
   }
   return result
 })
-
-interface TimelineMonthGroup {
-  key: string
-  year: string
-  month: number
-  count: number
-  posts: Post[]
-  newestDate: string
-  oldestDate: string
-}
-
-interface TimelineSegment {
-  group: TimelineMonthGroup
-  width: number
-  center: number
-}
-
-function getTimelineKey(date: string): string {
-  return date.slice(0, 7)
-}
-
-function formatFullDate(date: string | undefined): string {
-  if (!date) return ''
-
-  const [year, month, day] = date.split('-')
-  return `${year}年${Number(month)}月${Number(day)}日`
-}
-
-function getDateTimestamp(date: string): number {
-  const timestamp = Date.parse(`${date}T00:00:00Z`)
-  return Number.isFinite(timestamp) ? timestamp : Number.NaN
-}
-
-const timelineGroups = computed<TimelineMonthGroup[]>(() => {
-  const grouped = new Map<string, Post[]>()
-
-  posts.forEach((post) => {
-    const key = getTimelineKey(post.date)
-    const groupPosts = grouped.get(key) ?? []
-    groupPosts.push(post)
-    grouped.set(key, groupPosts)
-  })
-
-  return Array.from(grouped.entries()).map(([key, groupPosts]) => ({
-    key,
-    year: key.slice(0, 4),
-    month: Number(key.slice(5, 7)),
-    count: groupPosts.length,
-    posts: groupPosts,
-    newestDate: groupPosts[0]?.date ?? '',
-    oldestDate: groupPosts[groupPosts.length - 1]?.date ?? '',
-  }))
-})
-
-const timelineGroupBySlug = computed(() => {
-  const groups = new Map<string, TimelineMonthGroup>()
-
-  timelineGroups.value.forEach((group) => {
-    group.posts.forEach((post) => groups.set(post.slug, group))
-  })
-
-  return groups
-})
-
-const timelineYears = computed(() => Array.from(
-  new Set(timelineGroups.value.map((group) => group.year)),
-))
-
-const activeTimelineGroup = computed(() =>
-  timelineGroups.value.find((group) => group.key === activeTimelineKey.value)
-  ?? timelineGroups.value[0],
-)
-
-const visibleTimelineGroups = computed(() => {
-  const year = selectedTimelineYear.value || activeTimelineGroup.value?.year
-  return timelineGroups.value.filter((group) => group.year === year)
-})
-
-const timelineSegments = computed<TimelineSegment[]>(() => {
-  const groups = visibleTimelineGroups.value
-  if (groups.length === 0) return []
-
-  const weights = groups.map((group, index) => {
-    const newerGroup = groups[index - 1]
-    const gapDays = newerGroup
-      ? Math.abs(getDateTimestamp(newerGroup.newestDate) - getDateTimestamp(group.newestDate)) / 86_400_000
-      : 30
-    const timeWeight = Number.isFinite(gapDays) ? Math.min(3, Math.log1p(Math.max(gapDays, 1) / 30)) : 1
-    const articleWeight = Math.min(2, Math.log1p(group.count))
-    return 1 + timeWeight * 0.45 + articleWeight * 0.35
-  })
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
-
-  let offset = 0
-  return groups.map((group, index) => {
-    const width = (weights[index] / totalWeight) * 100
-    const segment = { group, width, center: offset + width / 2 }
-    offset += width
-    return segment
-  })
-})
-
-const activeTimelinePosition = computed(() => {
-  const segment = timelineSegments.value.find(({ group }) => group.key === activeTimelineKey.value)
-  return segment?.center ?? 50
-})
-
-const timelineMinDate = computed(() => posts[posts.length - 1]?.date ?? '')
-const timelineMaxDate = computed(() => posts[0]?.date ?? '')
 
 function readStoredPage(): number {
   if (typeof window === 'undefined') return 0
@@ -210,51 +240,28 @@ function storePage(page: number) {
   try {
     window.sessionStorage.setItem(HOME_PAGE_STORAGE_KEY, String(page))
   } catch {
-    // Ignore storage restrictions; pagination still works in memory.
+    // Ignore storage restrictions
   }
 }
 
-function getPageElement(index: number): HTMLElement | null {
-  return trackRef.value?.querySelector<HTMLElement>(`[data-home-page="${index}"]`) ?? null
-}
-
-function getPostElement(slug: string): HTMLElement | null {
-  return Array.from(trackRef.value?.querySelectorAll<HTMLElement>('[data-home-post]') ?? [])
-    .find((element) => element.dataset.homePost === slug) ?? null
-}
-
-function getVerticalElementTop(element: HTMLElement, track: HTMLElement): number {
-  const trackRect = track.getBoundingClientRect()
-  const pageRect = element.getBoundingClientRect()
-  return Math.max(0, track.scrollTop + pageRect.top - trackRect.top)
-}
-
-// 单页内部行数计算（1 行或 2 行）；一列布局改为纵向页面。
 function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
   const track = trackRef.value
   if (!track || pages.value.length === 0) return
 
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
-  const targetElement = isVerticalHome.value ? getPageElement(target) : null
-  if (isVerticalHome.value && !targetElement) return
-
   currentPage.value = target
-  const position = isVerticalHome.value && targetElement
-    ? getVerticalElementTop(targetElement, track)
-    : track.clientWidth * target
 
-  if (behavior === 'auto') {
-    // The track has scroll-smooth; override it for state restoration and resize reflow.
-    const previousScrollBehavior = track.style.scrollBehavior
-    track.style.scrollBehavior = 'auto'
-    if (isVerticalHome.value) track.scrollTop = position
-    else track.scrollLeft = position
-    track.style.scrollBehavior = previousScrollBehavior
-    return
+  if (!isVerticalHome.value) {
+    const position = track.clientWidth * target
+    if (behavior === 'auto') {
+      const previousScrollBehavior = track.style.scrollBehavior
+      track.style.scrollBehavior = 'auto'
+      track.scrollLeft = position
+      track.style.scrollBehavior = previousScrollBehavior
+      return
+    }
+    track.scrollTo({ left: position, behavior })
   }
-
-  if (isVerticalHome.value) track.scrollTo({ top: position, behavior })
-  else track.scrollTo({ left: position, behavior })
 }
 
 function restoreStoredPage() {
@@ -268,7 +275,9 @@ function restoreStoredPage() {
 
   pageRestored = true
   lastActivePerPage = layout.value.perPage
-  scrollToIndex(readStoredPage(), 'auto')
+  if (!isVerticalHome.value) {
+    scrollToIndex(readStoredPage(), 'auto')
+  }
 }
 
 function handlePrev() {
@@ -285,216 +294,76 @@ function handleDirectJump() {
   jumpInput.value = ''
 }
 
-function scrollToTimelinePosition(position: number) {
-  if (!Number.isFinite(position) || timelineSegments.value.length === 0) return
-
-  const target = timelineSegments.value.reduce((closest, segment) =>
-    Math.abs(segment.center - position) < Math.abs(closest.center - position) ? segment : closest,
-  )
-  scrollToTimelineGroup(target.group, 'auto')
-}
-
-function handleTimelineInput(event: Event) {
-  scrollToTimelinePosition(Number((event.target as HTMLInputElement).value))
-}
-
-let timelinePointerId: number | null = null
-
-function getTimelinePointerPosition(event: PointerEvent): number | null {
-  const timeline = event.currentTarget
-  if (!(timeline instanceof HTMLElement)) return null
-
-  const rect = timeline.getBoundingClientRect()
-  if (!rect.width) return null
-
-  return Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100))
-}
-
-function handleTimelinePointerDown(event: PointerEvent) {
-  if (event.pointerType === 'mouse' && event.button !== 0) return
-
-  const timeline = event.currentTarget
-  if (!(timeline instanceof HTMLElement)) return
-
-  timelinePointerId = event.pointerId
-  timeline.setPointerCapture(event.pointerId)
-  event.preventDefault()
-
-  const position = getTimelinePointerPosition(event)
-  if (position !== null) scrollToTimelinePosition(position)
-}
-
-function handleTimelinePointerMove(event: PointerEvent) {
-  if (timelinePointerId !== event.pointerId) return
-
-  event.preventDefault()
-  const position = getTimelinePointerPosition(event)
-  if (position !== null) scrollToTimelinePosition(position)
-}
-
-function handleTimelinePointerEnd(event: PointerEvent) {
-  if (timelinePointerId !== event.pointerId) return
-
-  const timeline = event.currentTarget
-  if (timeline instanceof HTMLElement && timeline.hasPointerCapture(event.pointerId)) {
-    timeline.releasePointerCapture(event.pointerId)
+// 筛选重置回到首位
+function resetPage() {
+  currentPage.value = 0
+  if (trackRef.value) {
+    if (isVerticalHome.value) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      trackRef.value.scrollLeft = 0
+    }
   }
-  timelinePointerId = null
 }
 
-function findClosestPost(date: string): Post | undefined {
-  const firstPost = posts[0]
-  if (!firstPost) return undefined
+watch([selectedFilterType, selectedCategory], () => {
+  resetPage()
+})
 
-  const targetTimestamp = getDateTimestamp(date)
-  if (!Number.isFinite(targetTimestamp)) return firstPost
-
-  return posts.reduce((closest, post) => {
-    const closestDistance = Math.abs(getDateTimestamp(closest.date) - targetTimestamp)
-    const postDistance = Math.abs(getDateTimestamp(post.date) - targetTimestamp)
-    return postDistance < closestDistance ? post : closest
-  }, firstPost)
-}
-
-function scrollToTimelinePost(post: Post, behavior: ScrollBehavior = 'smooth') {
-  const track = trackRef.value
-  const element = getPostElement(post.slug)
-  if (!track || !element || !isVerticalHome.value) return
-
-  const pageElement = element.closest<HTMLElement>('[data-home-page]')
-  const pageIndex = Number(pageElement?.dataset.homePage ?? '')
-  if (Number.isInteger(pageIndex)) currentPage.value = pageIndex
-
-  const group = timelineGroupBySlug.value.get(post.slug)
-  if (group) {
-    activeTimelineKey.value = group.key
-    activeTimelineDate.value = post.date
-    selectedTimelineDate.value = post.date
-    selectedTimelineYear.value = group.year
-  }
-
-  const position = getVerticalElementTop(element, track)
-  if (behavior === 'auto') {
-    const previousScrollBehavior = track.style.scrollBehavior
-    track.style.scrollBehavior = 'auto'
-    track.scrollTop = position
-    track.style.scrollBehavior = previousScrollBehavior
-    return
-  }
-
-  track.scrollTo({ top: position, behavior })
-}
-
-function scrollToTimelineGroup(group: TimelineMonthGroup, behavior: ScrollBehavior = 'smooth') {
-  const post = group.posts[0]
-  if (post) scrollToTimelinePost(post, behavior)
-}
-
-function handleTimelineYearChange() {
-  const group = timelineGroups.value.find(({ year }) => year === selectedTimelineYear.value)
-  if (group) scrollToTimelineGroup(group)
-}
-
-function handleTimelineDateChange() {
-  const post = findClosestPost(selectedTimelineDate.value)
-  if (post) scrollToTimelinePost(post)
-}
-
-function updateTimelineFromScroll(track: HTMLElement, markerTop: number) {
-  const postElements = Array.from(track.querySelectorAll<HTMLElement>('[data-home-post]'))
-  if (postElements.length === 0) return
-
-  let visiblePostElement = postElements[0]
-  postElements.forEach((element) => {
-    if (element.getBoundingClientRect().top <= markerTop) visiblePostElement = element
-  })
-
-  if (track.scrollTop + track.clientHeight >= track.scrollHeight - 2) {
-    visiblePostElement = postElements[postElements.length - 1]
-  }
-
-  const slug = visiblePostElement.dataset.homePost
-  const group = slug ? timelineGroupBySlug.value.get(slug) : undefined
-  const post = slug ? posts.find((item) => item.slug === slug) : undefined
-  if (!group || !post) return
-
-  activeTimelineKey.value = group.key
-  activeTimelineDate.value = post.date
-  selectedTimelineDate.value = post.date
-  selectedTimelineYear.value = group.year
-}
-
-// wheel 节流：一次手势只翻一页
+// 桌面端横向滚动滚轮翻页
 let lastWheelTime = 0
-const WHEEL_COOLDOWN = 700
+const WHEEL_COOLDOWN = 600
 
 function onWheel(e: WheelEvent) {
   if (isVerticalHome.value) return
 
-  // 让水平方向滚轮/触控板横向手势保持原生 snap 滚动
   const track = trackRef.value
-  if (!track || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
-  if (track.scrollHeight > track.clientHeight + 1) return
+  if (!track) return
 
-  e.preventDefault()
-  const now = Date.now()
-  if (now - lastWheelTime < WHEEL_COOLDOWN || Math.abs(e.deltaY) < 18) return
-  lastWheelTime = now
+  // 只要有纵向滚动量且不是在水平触摸板滚动
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && Math.abs(e.deltaY) >= 15) {
+    e.preventDefault()
+    const now = Date.now()
+    if (now - lastWheelTime < WHEEL_COOLDOWN) return
+    lastWheelTime = now
 
-  if (e.deltaY > 0) handleNext()
-  else handlePrev()
+    if (e.deltaY > 0) handleNext()
+    else handlePrev()
+  }
 }
 
-// 滚动时同步当前页（节流）
+// 桌面端同步当前页码
 let scrollRaf: number | null = null
 function onScroll() {
-  if (!viewActive.value) return
+  if (!viewActive.value || isVerticalHome.value) return
   if (scrollRaf) return
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = null
     if (!viewActive.value) return
     const currentTrack = trackRef.value
-    if (!currentTrack || pages.value.length === 0) return
+    if (!currentTrack || pages.value.length === 0 || !currentTrack.clientWidth) return
 
-    let newPage = 0
-    if (isVerticalHome.value) {
-      const pageElements = pages.value.map((_, index) => getPageElement(index)).filter((element): element is HTMLElement => Boolean(element))
-      const trackTop = currentTrack.getBoundingClientRect().top
-      const markerTop = trackTop + Math.min(96, currentTrack.clientHeight * 0.35)
-
-      pageElements.forEach((element, index) => {
-        if (element.getBoundingClientRect().top <= markerTop) newPage = index
-      })
-
-      if (currentTrack.scrollTop + currentTrack.clientHeight >= currentTrack.scrollHeight - 2) {
-        newPage = pages.value.length - 1
-      }
-
-      updateTimelineFromScroll(currentTrack, markerTop)
-    } else {
-      if (!currentTrack.clientWidth) return
-      newPage = Math.round(currentTrack.scrollLeft / currentTrack.clientWidth)
-    }
-
+    const newPage = Math.round(currentTrack.scrollLeft / currentTrack.clientWidth)
     currentPage.value = Math.max(0, Math.min(newPage, pages.value.length - 1))
   })
 }
 
-// 视口宽度变化时重新分页并归位到最近一页
-// Keep the first visible post stable when the number of columns or rows changes.
+// 视口大小变化处理
 watch(
   [() => layout.value.perPage, () => isVerticalHome.value, trackWidth],
   async ([perPage, , nextWidth]) => {
     if (!mounted.value || !viewActive.value || !pageRestored || !trackRef.value || !nextWidth) return
 
     const oldPerPage = lastActivePerPage || perPage
-    const anchorIndex = Math.max(0, Math.min(posts.length - 1, currentPage.value * oldPerPage))
+    const anchorIndex = Math.max(0, Math.min(filteredPosts.value.length - 1, currentPage.value * oldPerPage))
     const targetPage = Math.floor(anchorIndex / perPage)
 
     await nextTick()
     if (!viewActive.value || !trackRef.value) return
     lastActivePerPage = perPage
-    scrollToIndex(targetPage, 'auto')
+    if (!isVerticalHome.value) {
+      scrollToIndex(targetPage, 'auto')
+    }
   },
 )
 
@@ -519,27 +388,7 @@ onMounted(() => {
 
   nextTick(() => {
     restoreStoredPage()
-    const track = trackRef.value
-    if (track && isVerticalHome.value) {
-      const markerTop = track.getBoundingClientRect().top + Math.min(96, track.clientHeight * 0.35)
-      updateTimelineFromScroll(track, markerTop)
-    }
   })
-})
-
-onActivated(() => {
-  viewActive.value = true
-  nextTick(() => {
-    const track = trackRef.value
-    if (track && isVerticalHome.value) {
-      const markerTop = track.getBoundingClientRect().top + Math.min(96, track.clientHeight * 0.35)
-      updateTimelineFromScroll(track, markerTop)
-    }
-  })
-})
-
-onDeactivated(() => {
-  viewActive.value = false
 })
 
 onUnmounted(() => {
@@ -551,7 +400,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <!-- 宽屏标题固定在文章区域上方；窄屏标题放入文章流中自然滚走 -->
+    <!-- 桌面端标题 -->
     <div
       v-if="!isVerticalHome"
       class="mx-auto w-full max-w-7xl shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3"
@@ -564,172 +413,187 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- 一列布局：文章区域连续滚动，时间导航固定在滚动容器上方 -->
-    <nav
-      v-if="isVerticalHome && timelineGroups.length > 0"
-      class="home-mobile-timeline shrink-0 border-y bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-      aria-label="首页时间导航"
+    <!-- 移动端：轻量紧凑的筛选胶囊栏 + 自定义分类/类型浮层 + 归档直达抽屉按钮 -->
+    <div
+      v-if="isVerticalHome"
+      class="sticky top-14 z-30 shrink-0 border-b bg-background/95 px-3 py-2.5 backdrop-blur-md"
     >
-      <div class="mx-auto w-full max-w-7xl">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-baseline gap-2 text-xs">
-            <span class="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-            <time
-              :datetime="activeTimelineDate"
-              class="truncate text-sm font-semibold tracking-tight text-foreground"
-            >
-              {{ formatFullDate(activeTimelineDate) }}
-            </time>
-            <span class="shrink-0 text-muted-foreground">{{ activeTimelineGroup?.count }} 篇</span>
-          </div>
-          <span class="shrink-0 text-[10px] text-muted-foreground">共 {{ posts.length }} 篇</span>
-        </div>
-
-        <div class="mt-1.5 flex items-center gap-2">
-          <select
-            v-model="selectedTimelineYear"
-            class="h-8 w-[6.5rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground shadow-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            aria-label="选择年份"
-            @change="handleTimelineYearChange"
-          >
-            <option
-              v-for="year in timelineYears"
-              :key="year"
-              :value="year"
-            >
-              {{ year }}年
-            </option>
-          </select>
-          <input
-            v-model="selectedTimelineDate"
-            type="date"
-            :min="timelineMinDate"
-            :max="timelineMaxDate"
-            aria-label="按日期定位"
-            class="h-8 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-xs text-foreground shadow-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            @change="handleTimelineDateChange"
-          />
-        </div>
-
-        <div
-          class="relative mt-1.5 h-6 touch-none px-0.5"
-          @pointerdown="handleTimelinePointerDown"
-          @pointermove="handleTimelinePointerMove"
-          @pointerup="handleTimelinePointerEnd"
-          @pointercancel="handleTimelinePointerEnd"
-        >
-          <div class="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-muted-foreground/15">
-            <span
-              v-for="segment in timelineSegments"
-              :key="`timeline-segment-${segment.group.key}`"
-              class="h-full shrink-0 transition-colors duration-200"
-              :class="segment.group.key === activeTimelineKey ? 'bg-primary' : 'bg-muted-foreground/25'"
-              :style="{ width: `${segment.width}%` }"
-            />
-          </div>
-          <div
-            class="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-4 ring-background transition-[left] duration-200"
-            :style="{ left: `${activeTimelinePosition}%` }"
-          />
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            :value="activeTimelinePosition"
-            aria-label="在时间轴上定位"
-            :aria-valuetext="formatFullDate(activeTimelineDate)"
-            class="home-page-range"
-            @input="handleTimelineInput"
-          />
-        </div>
-
-        <div class="mt-0.5 flex items-start gap-1 overflow-hidden text-[10px] text-muted-foreground">
+      <div class="flex items-center gap-2">
+        <!-- 自定义分类下拉选择菜单（包含 全部、AI原稿 以及 真实分类） -->
+        <div ref="categoryDropdownRef" class="relative shrink-0">
           <button
-            v-for="segment in timelineSegments"
-            :key="`timeline-label-${segment.group.key}`"
             type="button"
-            class="min-w-0 truncate text-center transition-colors hover:text-foreground focus:outline-none focus-visible:text-primary"
-            :class="segment.group.key === activeTimelineKey ? 'font-semibold text-primary' : ''"
-            :style="{ width: `${segment.width}%` }"
-            :aria-current="segment.group.key === activeTimelineKey ? 'location' : undefined"
-            :aria-label="`${segment.group.year}年${segment.group.month}月，共 ${segment.group.count} 篇`"
-            @click="scrollToTimelineGroup(segment.group)"
+            class="inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all select-none"
+            :class="selectedFilterType !== 'all'
+              ? 'border-primary/50 bg-primary/10 text-primary font-semibold shadow-xs'
+              : 'border-border/80 bg-muted/60 text-foreground hover:bg-muted'"
+            @click="categoryDropdownOpen = !categoryDropdownOpen"
           >
-            {{ segment.group.month }}月 · {{ segment.group.count }}
+            <Sparkles v-if="selectedFilterType === 'ai'" class="size-3.5 text-primary shrink-0" />
+            <Layers v-else class="size-3.5 text-muted-foreground shrink-0" />
+            <span class="max-w-[120px] truncate">{{ currentFilterLabel }}</span>
+            <ChevronDown class="size-3 opacity-60 transition-transform duration-200" :class="{ 'rotate-180': categoryDropdownOpen }" />
+          </button>
+
+          <!-- 自定义 Dropdown 菜单 -->
+          <Transition name="dropdown">
+            <div
+              v-if="categoryDropdownOpen"
+              class="absolute left-0 top-full mt-1.5 z-40 w-48 rounded-xl border border-border/80 bg-card p-1.5 shadow-xl backdrop-blur-md ring-1 ring-black/5"
+            >
+              <!-- 全部分类选项 -->
+              <button
+                type="button"
+                class="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                :class="selectedFilterType === 'all'
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'text-foreground hover:bg-muted'"
+                @click="selectAll"
+              >
+                <span>{{ t('filter.allCategories') }}</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-[11px] font-mono text-muted-foreground">({{ allPosts.length }})</span>
+                  <Check v-if="selectedFilterType === 'all'" class="size-3.5 text-primary" />
+                </div>
+              </button>
+
+              <div class="my-1 h-px bg-border/60" />
+
+              <!-- AI 原稿特别分类 -->
+              <button
+                type="button"
+                class="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                :class="selectedFilterType === 'ai'
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'text-foreground hover:bg-muted'"
+                @click="selectAi"
+              >
+                <div class="flex items-center gap-1.5">
+                  <Sparkles class="size-3.5 text-primary" />
+                  <span>{{ t('filter.ai') }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-[11px] font-mono text-muted-foreground">({{ aiPostsCount }})</span>
+                  <Check v-if="selectedFilterType === 'ai'" class="size-3.5 text-primary" />
+                </div>
+              </button>
+
+              <div v-if="categories.length > 0" class="my-1 h-px bg-border/60" />
+
+              <!-- 各普通分类列表 -->
+              <div v-if="categories.length > 0" class="max-h-48 overflow-y-auto space-y-0.5">
+                <button
+                  v-for="cat in categories"
+                  :key="cat.name"
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                  :class="selectedFilterType === 'category' && selectedCategory === cat.name
+                    ? 'bg-primary/10 text-primary font-semibold'
+                    : 'text-foreground hover:bg-muted'"
+                  @click="selectSpecificCategory(cat.name)"
+                >
+                  <span class="truncate pr-2">{{ cat.name }}</span>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <span class="text-[11px] font-mono text-muted-foreground">({{ cat.count }})</span>
+                    <Check v-if="selectedFilterType === 'category' && selectedCategory === cat.name" class="size-3.5 text-primary" />
+                  </div>
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
+        <!-- 快速清空筛选/显示当前筛选状态提示 -->
+        <div v-if="selectedFilterType !== 'all'" class="flex items-center">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+            @click="selectAll"
+          >
+            <span>重置</span>
+            <X class="size-3" />
           </button>
         </div>
 
-      </div>
-    </nav>
+        <div class="flex-1" />
 
-    <!-- 多列横向分页；一列布局切换为上下滚动 -->
+        <!-- 归档直达按钮（点击唤起年月抽屉） -->
+        <button
+          type="button"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/80 bg-muted/60 px-3 py-1 text-xs font-medium text-foreground transition-all hover:border-primary/50 hover:bg-muted select-none"
+          @click="timelineDrawerOpen = true"
+        >
+          <Calendar class="size-3.5 text-primary" />
+          <span>{{ t('filter.timeline') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 滚动容器：移动端为原生纵向流畅滚动（利用 window/body 滚动），桌面端为横向分页滚动 -->
     <div
       ref="trackRef"
-      class="home-track min-h-0 flex flex-1 scroll-smooth scrollbar-hide"
+      class="home-track min-h-0 flex flex-1 scrollbar-hide"
       :class="isVerticalHome
-        ? 'flex-col overflow-x-hidden overflow-y-auto snap-none touch-pan-y'
-        : 'overflow-x-auto overflow-y-auto snap-x snap-mandatory'"
+        ? 'flex-col sm:overflow-y-auto'
+        : 'overflow-x-auto overflow-y-auto snap-x snap-mandatory scroll-smooth'"
       @scroll="onScroll"
     >
+      <!-- 移动端文章列表流（支持精准定位滚动） -->
       <div
         v-if="isVerticalHome"
-        class="mx-auto w-full max-w-7xl shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3"
+        class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 py-3"
       >
-        <h1 class="text-2xl font-bold tracking-tight md:text-3xl">
-          {{ siteConfig.site.title }}
-        </h1>
-        <p class="text-sm text-muted-foreground md:text-base">
-          {{ siteConfig.site.description }}
-        </p>
+        <div v-if="filteredPosts.length === 0" class="py-16 text-center text-sm text-muted-foreground">
+          {{ t('search.noResults') }}
+        </div>
+        <RouterLink
+          v-for="post in filteredPosts"
+          :id="`post-${post.slug}`"
+          :key="post.slug"
+          :to="`/post/${post.slug}`"
+          class="block w-full scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+        >
+          <PostCard :post="post" />
+        </RouterLink>
       </div>
 
-      <section
-        v-for="(page, pageIndex) in pages"
-        :key="`${layout.perPage}-${pageIndex}`"
-        :data-home-page="pageIndex"
-        class="flex h-auto w-full shrink-0 flex-col justify-start"
-        :class="isVerticalHome ? 'min-h-0' : 'snap-start min-h-full'"
-      >
-        <!-- 内部居中限宽容器：justify-start 让 Grid 靠上，留白总是在下方 -->
-        <div
-          class="mx-auto flex w-full max-w-7xl flex-col justify-start px-4 py-2 md:px-8 md:py-3"
-          :class="isVerticalHome ? 'min-h-0' : 'min-h-full'"
+      <!-- 桌面端分页网格 -->
+      <template v-else>
+        <section
+          v-for="(page, pageIndex) in pages"
+          :key="`${layout.perPage}-${pageIndex}`"
+          :data-home-page="pageIndex"
+          class="flex h-auto w-full shrink-0 snap-start min-h-full flex-col justify-start"
         >
-          <div
-            class="grid w-full auto-rows-min gap-4 transition-all duration-300"
-            :class="[gridColsClass]"
-            :style="isVerticalHome
-              ? undefined
-              : { gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, auto))` }"
-          >
-            <RouterLink
-              v-for="post in page"
-              :key="post.slug"
-              :data-home-post="post.slug"
-              :to="`/post/${post.slug}`"
-              class="group flex min-h-0 col-span-1 min-w-0 max-w-full"
+          <div class="mx-auto flex w-full max-w-7xl min-h-full flex-col justify-start px-4 py-2 md:px-8 md:py-3">
+            <div
+              class="grid w-full auto-rows-min gap-4 transition-all duration-300"
+              :class="[gridColsClass]"
+              :style="{ gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, auto))` }"
             >
-              <PostCard
-                :post="post"
-                compact
-                class="w-full"
-              />
-            </RouterLink>
+              <RouterLink
+                v-for="post in page"
+                :key="post.slug"
+                :to="`/post/${post.slug}`"
+                class="group flex min-h-0 col-span-1 min-w-0 max-w-full"
+              >
+                <PostCard :post="post" compact class="w-full" />
+              </RouterLink>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </template>
 
+      <!-- 移动端页脚跟随在列表末尾 -->
       <SiteFooter v-if="isVerticalHome" />
     </div>
 
-    <!-- 底部分页条：页码数字按钮 + 前后步进 + 快速跳转输入框 -->
+    <!-- 桌面端底部分页条 -->
     <nav
       v-if="pages.length > 1 && !isVerticalHome"
       class="shrink-0 flex items-center justify-center gap-1.5 sm:gap-2.5 py-2.5 sm:py-3 px-4 select-none"
       aria-label="分页导航"
     >
-      <!-- 上一页 -->
       <button
         type="button"
         class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md border border-border bg-card text-foreground transition-all hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer shadow-xs"
@@ -740,7 +604,6 @@ onUnmounted(() => {
         <ChevronLeft class="size-3.5 sm:size-4" />
       </button>
 
-      <!-- 中/宽屏：数字按钮列表 -->
       <div class="hidden sm:flex items-center gap-1">
         <button
           v-for="(_, index) in pages"
@@ -760,14 +623,6 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- 窄屏：紧凑当前页/总页显示 -->
-      <div class="flex sm:hidden items-center px-2 py-1 rounded-md border border-border bg-card text-xs font-medium font-mono text-foreground shadow-xs">
-        <span class="text-primary font-semibold">{{ currentPage + 1 }}</span>
-        <span class="mx-1 text-muted-foreground/60">/</span>
-        <span class="text-muted-foreground">{{ pages.length }}</span>
-      </div>
-
-      <!-- 下一页 -->
       <button
         type="button"
         class="inline-flex size-7 sm:size-8 items-center justify-center rounded-md border border-border bg-card text-foreground transition-all hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-30 cursor-pointer shadow-xs"
@@ -778,10 +633,8 @@ onUnmounted(() => {
         <ChevronRight class="size-3.5 sm:size-4" />
       </button>
 
-      <!-- 分隔线 -->
       <div class="h-4 w-[1px] bg-border mx-0.5" />
 
-      <!-- 直接跳转输入框 -->
       <form
         class="flex items-center gap-1"
         @submit.prevent="handleDirectJump"
@@ -809,14 +662,73 @@ onUnmounted(() => {
     </nav>
 
     <SiteFooter v-if="!isVerticalHome" />
+
+    <!-- 移动端：直达年月时间轴抽屉 (Bottom Sheet) -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="timelineDrawerOpen"
+          class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity"
+          @click="timelineDrawerOpen = false"
+        />
+      </Transition>
+
+      <Transition name="drawer">
+        <div
+          v-if="timelineDrawerOpen"
+          class="fixed inset-x-0 bottom-0 z-50 max-h-[75vh] flex flex-col rounded-t-2xl border-t border-border bg-background shadow-2xl transition-transform"
+        >
+          <!-- 抽屉头部 -->
+          <div class="flex items-center justify-between border-b px-4 py-3">
+            <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
+              <History class="size-4 text-primary" />
+              <span>{{ t('filter.timeline') }}</span>
+              <span class="text-xs text-muted-foreground">({{ filteredPosts.length }} 篇)</span>
+            </div>
+            <button
+              type="button"
+              class="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none"
+              @click="timelineDrawerOpen = false"
+            >
+              <X class="size-5" />
+            </button>
+          </div>
+
+          <!-- 年月分组直达列表 -->
+          <div class="overflow-y-auto p-4 space-y-5">
+            <div
+              v-for="yearGroup in archiveTimeline"
+              :key="yearGroup.year"
+              class="space-y-2.5"
+            >
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-foreground">{{ yearGroup.year }} 年</span>
+                <span class="text-[11px] text-muted-foreground">({{ yearGroup.count }} 篇)</span>
+                <div class="h-px flex-1 bg-border/60" />
+              </div>
+
+              <!-- 月份网格按钮，点击立即直达 -->
+              <div class="grid grid-cols-3 gap-2">
+                <button
+                  v-for="monthGroup in yearGroup.months"
+                  :key="monthGroup.key"
+                  type="button"
+                  class="flex flex-col items-center justify-center rounded-xl border border-border/80 bg-card p-2.5 text-xs transition-all hover:border-primary hover:bg-primary/5 active:scale-95 shadow-xs"
+                  @click="jumpToPost(monthGroup.firstSlug)"
+                >
+                  <span class="font-semibold text-foreground">{{ monthGroup.month }} 月</span>
+                  <span class="text-[10px] text-muted-foreground">{{ monthGroup.count }} 篇文章</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-.home-track {
-  overscroll-behavior: contain;
-}
-
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -824,25 +736,32 @@ onUnmounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-.home-page-range {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: grab;
+/* 抽屉弹出动画 */
+.drawer-enter-active,
+.drawer-leave-active {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drawer-enter-from,
+.drawer-leave-to {
+  transform: translateY(100%);
+}
+
+/* 下拉菜单动画 */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
   opacity: 0;
-  outline: none;
-}
-
-.home-page-range:active {
-  cursor: grabbing;
-}
-
-.home-page-range:focus-visible {
-  border-radius: 9999px;
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
+  transform: translateY(-6px) scale(0.97);
 }
 </style>

@@ -61,19 +61,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-dvh min-w-0 flex-col overflow-hidden bg-background text-foreground transition-colors duration-300">
-    <!-- 顶部导航栏 -->
-    <header class="relative z-50 w-full shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  <div class="flex min-h-dvh sm:h-dvh min-w-0 flex-col sm:overflow-hidden bg-background text-foreground transition-colors duration-300">
+    <!-- 顶部导航栏：在移动端吸顶，跟随页面自然滚动 -->
+    <header class="sticky top-0 z-50 w-full shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div class="mx-auto flex h-14 w-full max-w-5xl min-w-0 items-center gap-3 px-3 sm:px-6">
         <!-- Logo -->
-        <RouterLink to="/" class="group flex min-w-0 shrink-0 items-center gap-2.5 text-base font-semibold tracking-tight sm:text-lg">
+        <RouterLink to="/" class="group flex min-w-0 shrink-0 items-center gap-2 text-base font-semibold tracking-tight sm:gap-2.5 sm:text-lg">
           <img
             :src="siteConfig.author.avatar"
             :alt="siteConfig.site.title"
             class="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover ring-1 ring-border transition-transform duration-300 group-hover:scale-105 shadow-sm"
             loading="eager"
           />
-          <span class="transition-colors group-hover:text-primary font-bold tracking-tight text-foreground hidden sm:inline-block">
+          <span class="transition-colors group-hover:text-primary font-bold tracking-tight text-foreground text-sm sm:text-base">
             {{ siteConfig.site.title }}
           </span>
         </RouterLink>
@@ -178,8 +178,8 @@ onUnmounted(() => {
     </header>
 
     <!-- 视图路由主体 -->
-    <main class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <main class="relative flex min-w-0 flex-1 flex-col sm:min-h-0 sm:overflow-hidden">
+      <div class="relative flex min-w-0 flex-1 flex-col sm:min-h-0 sm:overflow-hidden">
         <RouterView v-slot="{ Component }">
           <Transition name="fade" mode="out-in">
             <KeepAlive include="HomeView">

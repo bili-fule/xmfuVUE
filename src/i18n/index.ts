@@ -59,6 +59,13 @@ const messages: Record<Locale, MessageDict> = {
     'about.licenseNote': '转载请注明出处，署名原作者，且不得用于商业用途',
     'footer.copyright': 'Copyright',
     'footer.backToTop': '回到顶部',
+    'filter.all': '全部',
+    'filter.ai': 'AI 原稿',
+    'filter.allCategories': '全部分类',
+    'filter.allYears': '全部年份',
+    'filter.timeline': '归档索引',
+    'filter.jumpTo': '跳转到',
+    'filter.count': '{n} 篇',
   },
   en: {
     'nav.home': 'Home',
@@ -112,6 +119,13 @@ const messages: Record<Locale, MessageDict> = {
     'about.licenseNote': 'License note: attribution, non-commercial',
     'footer.copyright': 'Copyright',
     'footer.backToTop': 'Back to top',
+    'filter.all': 'All',
+    'filter.ai': 'AI Drafts',
+    'filter.allCategories': 'Categories',
+    'filter.allYears': 'Years',
+    'filter.timeline': 'Archives',
+    'filter.jumpTo': 'Jump to',
+    'filter.count': '{n} posts',
   },
 }
 

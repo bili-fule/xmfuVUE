@@ -182,7 +182,7 @@ function coverBackground(cover: string): string {
   <div
     v-if="post"
     ref="scrollContainerRef"
-    class="h-full min-h-0 min-w-0 overflow-y-auto relative scroll-smooth"
+    class="min-h-full sm:h-full min-w-0 sm:overflow-y-auto relative scroll-smooth"
     @scroll="handleScroll"
   >
     <div class="mx-auto max-w-5xl px-4 py-6 md:py-10 space-y-8">

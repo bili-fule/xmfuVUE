@@ -12,7 +12,7 @@ const { friends, site, author } = siteConfig
 </script>
 
 <template>
-  <div class="h-full min-w-0 overflow-x-clip overflow-y-auto">
+  <div class="min-h-full sm:h-full min-w-0 sm:overflow-x-clip sm:overflow-y-auto">
     <div class="mx-auto max-w-4xl px-4 py-8 md:py-12 space-y-10">
       <!-- 头部介绍 -->
       <div class="space-y-2 border-b pb-6">
