@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import SiteFooter from '@/components/SiteFooter.vue'
 import { siteConfig } from '@/data/site'
 import { t } from '@/i18n'
 
@@ -121,7 +120,5 @@ const { author, site, license } = siteConfig
         </Card>
       </section>
     </div>
-
-    <SiteFooter />
   </div>
 </template>

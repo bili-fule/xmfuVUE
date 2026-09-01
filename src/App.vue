@@ -110,6 +110,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
+const currentYear = new Date().getFullYear()
 </script>
 
 <template>
@@ -247,6 +248,20 @@ onUnmounted(() => {
         </RouterView>
       </div>
 
+      <!-- 全局轻量页脚（与各视图滚动区自然融合） -->
+      <footer class="z-10 shrink-0 border-t bg-background/80 px-4 py-2 text-center text-[11px] text-muted-foreground backdrop-blur-xs sm:text-xs">
+        <div class="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-1">
+          <p>© {{ currentYear }} {{ siteConfig.site.title }}. {{ t('footer.copyright') || 'All rights reserved.' }}</p>
+          <a
+            :href="siteConfig.license.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-primary transition-colors inline-flex items-center gap-1"
+          >
+            {{ siteConfig.license.name }}
+          </a>
+        </div>
+      </footer>
     </main>
 
     <!-- 全局搜索弹窗 -->
