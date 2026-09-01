@@ -384,14 +384,20 @@ onUnmounted(() => {
         v-for="(page, pageIndex) in pages"
         :key="`${layout.perPage}-${pageIndex}`"
         :data-home-page="pageIndex"
-        class="snap-start flex min-h-full h-auto w-full shrink-0 flex-col justify-start"
+        class="flex h-auto w-full shrink-0 flex-col justify-start"
+        :class="isVerticalHome ? 'min-h-0' : 'snap-start min-h-full'"
       >
         <!-- 内部居中限宽容器：justify-start 让 Grid 靠上，留白总是在下方 -->
-        <div class="mx-auto flex min-h-full w-full max-w-7xl flex-col justify-start px-4 py-2 md:px-8 md:py-3">
+        <div
+          class="mx-auto flex w-full max-w-7xl flex-col justify-start px-4 py-2 md:px-8 md:py-3"
+          :class="isVerticalHome ? 'min-h-0' : 'min-h-full'"
+        >
           <div
             class="grid w-full auto-rows-min gap-4 transition-all duration-300"
             :class="[gridColsClass]"
-            :style="{ gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, auto))` }"
+            :style="isVerticalHome
+              ? undefined
+              : { gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, auto))` }"
           >
             <RouterLink
               v-for="post in page"
