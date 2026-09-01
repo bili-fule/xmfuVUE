@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 import { getHomePosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
 
@@ -59,7 +60,8 @@ const layout = computed<LayoutConfig>(() => {
     ? trackHeight.value || Math.max(viewportHeight.value - 160, CARD_MIN_HEIGHT)
     : 640
   const cols = getColumnCount(width)
-  const rows = height >= CARD_MIN_HEIGHT * 2 + PAGE_GAP ? 2 : 1
+  // Keep mobile home as one continuous article stream regardless of viewport height.
+  const rows = cols === 1 ? 1 : height >= CARD_MIN_HEIGHT * 2 + PAGE_GAP ? 2 : 1
 
   return { cols, rows, perPage: cols * rows }
 })
@@ -451,27 +453,27 @@ function onScroll() {
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = null
     if (!viewActive.value) return
-    const track = trackRef.value
-    if (!track || pages.value.length === 0) return
+    const currentTrack = trackRef.value
+    if (!currentTrack || pages.value.length === 0) return
 
     let newPage = 0
     if (isVerticalHome.value) {
       const pageElements = pages.value.map((_, index) => getPageElement(index)).filter((element): element is HTMLElement => Boolean(element))
-      const trackTop = track.getBoundingClientRect().top
-      const markerTop = trackTop + Math.min(96, track.clientHeight * 0.35)
+      const trackTop = currentTrack.getBoundingClientRect().top
+      const markerTop = trackTop + Math.min(96, currentTrack.clientHeight * 0.35)
 
       pageElements.forEach((element, index) => {
         if (element.getBoundingClientRect().top <= markerTop) newPage = index
       })
 
-      if (track.scrollTop + track.clientHeight >= track.scrollHeight - 2) {
+      if (currentTrack.scrollTop + currentTrack.clientHeight >= currentTrack.scrollHeight - 2) {
         newPage = pages.value.length - 1
       }
 
-      updateTimelineFromScroll(track, markerTop)
+      updateTimelineFromScroll(currentTrack, markerTop)
     } else {
-      if (!track.clientWidth) return
-      newPage = Math.round(track.scrollLeft / track.clientWidth)
+      if (!currentTrack.clientWidth) return
+      newPage = Math.round(currentTrack.scrollLeft / currentTrack.clientWidth)
     }
 
     currentPage.value = Math.max(0, Math.min(newPage, pages.value.length - 1))
@@ -549,8 +551,11 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <!-- 顶部标题区 -->
-    <div class="shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3 max-w-7xl mx-auto w-full">
+    <!-- 宽屏标题固定在文章区域上方；窄屏标题放入文章流中自然滚走 -->
+    <div
+      v-if="!isVerticalHome"
+      class="mx-auto w-full max-w-7xl shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3"
+    >
       <h1 class="text-2xl font-bold tracking-tight md:text-3xl">
         {{ siteConfig.site.title }}
       </h1>
@@ -667,6 +672,18 @@ onUnmounted(() => {
         : 'overflow-x-auto overflow-y-auto snap-x snap-mandatory'"
       @scroll="onScroll"
     >
+      <div
+        v-if="isVerticalHome"
+        class="mx-auto w-full max-w-7xl shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3"
+      >
+        <h1 class="text-2xl font-bold tracking-tight md:text-3xl">
+          {{ siteConfig.site.title }}
+        </h1>
+        <p class="text-sm text-muted-foreground md:text-base">
+          {{ siteConfig.site.description }}
+        </p>
+      </div>
+
       <section
         v-for="(page, pageIndex) in pages"
         :key="`${layout.perPage}-${pageIndex}`"
@@ -702,6 +719,8 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <SiteFooter v-if="isVerticalHome" />
     </div>
 
     <!-- 底部分页条：页码数字按钮 + 前后步进 + 快速跳转输入框 -->
@@ -788,6 +807,8 @@ onUnmounted(() => {
         </button>
       </form>
     </nav>
+
+    <SiteFooter v-if="!isVerticalHome" />
   </div>
 </template>
 
