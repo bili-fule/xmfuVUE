@@ -283,14 +283,61 @@ function handleDirectJump() {
   jumpInput.value = ''
 }
 
-function handleTimelineInput(event: Event) {
-  const position = Number((event.target as HTMLInputElement).value)
+function scrollToTimelinePosition(position: number) {
   if (!Number.isFinite(position) || timelineSegments.value.length === 0) return
 
   const target = timelineSegments.value.reduce((closest, segment) =>
     Math.abs(segment.center - position) < Math.abs(closest.center - position) ? segment : closest,
   )
   scrollToTimelineGroup(target.group, 'auto')
+}
+
+function handleTimelineInput(event: Event) {
+  scrollToTimelinePosition(Number((event.target as HTMLInputElement).value))
+}
+
+let timelinePointerId: number | null = null
+
+function getTimelinePointerPosition(event: PointerEvent): number | null {
+  const timeline = event.currentTarget
+  if (!(timeline instanceof HTMLElement)) return null
+
+  const rect = timeline.getBoundingClientRect()
+  if (!rect.width) return null
+
+  return Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100))
+}
+
+function handleTimelinePointerDown(event: PointerEvent) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  const timeline = event.currentTarget
+  if (!(timeline instanceof HTMLElement)) return
+
+  timelinePointerId = event.pointerId
+  timeline.setPointerCapture(event.pointerId)
+  event.preventDefault()
+
+  const position = getTimelinePointerPosition(event)
+  if (position !== null) scrollToTimelinePosition(position)
+}
+
+function handleTimelinePointerMove(event: PointerEvent) {
+  if (timelinePointerId !== event.pointerId) return
+
+  event.preventDefault()
+  const position = getTimelinePointerPosition(event)
+  if (position !== null) scrollToTimelinePosition(position)
+}
+
+function handleTimelinePointerEnd(event: PointerEvent) {
+  if (timelinePointerId !== event.pointerId) return
+
+  const timeline = event.currentTarget
+  if (timeline instanceof HTMLElement && timeline.hasPointerCapture(event.pointerId)) {
+    timeline.releasePointerCapture(event.pointerId)
+  }
+  timelinePointerId = null
 }
 
 function findClosestPost(date: string): Post | undefined {
@@ -559,7 +606,13 @@ onUnmounted(() => {
           />
         </div>
 
-        <div class="relative mt-1.5 h-6 px-0.5">
+        <div
+          class="relative mt-1.5 h-6 touch-none px-0.5"
+          @pointerdown="handleTimelinePointerDown"
+          @pointermove="handleTimelinePointerMove"
+          @pointerup="handleTimelinePointerEnd"
+          @pointercancel="handleTimelinePointerEnd"
+        >
           <div class="pointer-events-none absolute inset-x-0 top-1/2 flex h-1.5 -translate-y-1/2 overflow-hidden rounded-full bg-muted-foreground/15">
             <span
               v-for="segment in timelineSegments"
