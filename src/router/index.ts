@@ -1,6 +1,5 @@
 import HomeView from '@/views/HomeView.vue'
 import PostView from '@/views/PostView.vue'
-import AiLabView from '@/views/AiLabView.vue'
 import type { RouteRecordRaw } from 'vue-router'
 
 // 仅导出路由表。router 实例由 vite-ssg 的 ViteSSG 内部创建
@@ -16,20 +15,6 @@ export const routes: RouteRecordRaw[] = [
     name: 'post',
     component: PostView,
     props: true,
-  },
-  {
-    path: '/archive',
-    name: 'archive',
-    component: () => import('@/views/ArchiveView.vue'),
-  },
-  {
-    path: '/archive/ai-lab',
-    name: 'archive-ai-lab',
-    component: AiLabView,
-  },
-  {
-    path: '/ai-lab',
-    redirect: '/archive/ai-lab',
   },
   {
     path: '/friends',

@@ -20,7 +20,7 @@
 - **TOC 目录** — 文章页侧边栏，`IntersectionObserver` 高亮当前章节
 - **i18n** — 中英双语，自实现轻量 `t()` 函数
 - **SEO** — 动态 meta 标签、JSON-LD 结构化数据、sitemap.xml、rss.xml、robots.txt
-- **归档 / 关于 / 友链** — 独立页面
+- **关于 / 友链** — 独立页面
 - **Giscus 评论** — 跟随站点主题亮/暗自适应
 
 ## 目录结构
@@ -32,7 +32,7 @@ src/
 ├── data/                # 站点配置、文章数据接口
 ├── lib/                 # 站点常量
 ├── plugins/md-posts.ts  # Vite 插件：md 编译时构建 + 搜索索引 + RSS/sitemap
-├── views/               # 页面（Home/Post/Archive/About/Friends）
+├── views/               # 页面（Home/Post/About/Friends）
 ├── i18n/                # 中英文字典 + t() 函数
 └── router/              # vue-router 路由
 ```

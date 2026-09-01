@@ -4,7 +4,7 @@ published: 2026-08-30
 description: 记录一次关于 AI 原稿分区、提示词留存和对话记录展示的博客设计讨论。
 image: ''
 tags: [AI, 博客设计, Markdown, 生成记录]
-category: AI 实验室
+category: AI
 draft: false
 lang: zh
 origin: ai

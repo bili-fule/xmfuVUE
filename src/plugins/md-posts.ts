@@ -267,7 +267,7 @@ function isPostFile(file: string, postsDir: string): boolean {
 
 /**
  * dev 下失效 virtual:posts 模块并触发全页 reload。
- * 文章列表是全局数据（首页、归档、搜索、RSS 都依赖），HMR 局部更新容易状态错位，
+ * 文章列表是全局数据（首页、搜索、RSS 都依赖），HMR 局部更新容易状态错位，
  * 全 reload 最可靠。供 configureServer 的 watcher 兜底调用。
  */
 function invalidatePostsModule(server: ViteDevServer): void {

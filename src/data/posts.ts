@@ -28,12 +28,6 @@ export interface Post {
   conversation: ConversationTurn[]
 }
 
-export function getAllPosts(): Post[] {
-  return [...posts]
-    .filter((post) => !post.draft && post.origin !== 'ai')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-}
-
 export function getAllPublishedPosts(): Post[] {
   return [...posts]
     .filter((post) => !post.draft)
@@ -42,10 +36,6 @@ export function getAllPublishedPosts(): Post[] {
 
 export function getHomePosts(): Post[] {
   return getAllPublishedPosts()
-}
-
-export function getAiPosts(): Post[] {
-  return getAllPublishedPosts().filter((post) => post.origin === 'ai')
 }
 
 export function getPostBySlug(slug: string): Post | undefined {
