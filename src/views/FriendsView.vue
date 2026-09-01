@@ -3,6 +3,7 @@ import { ExternalLink, Users, PlusCircle } from 'lucide-vue-next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import SiteFooter from '@/components/SiteFooter.vue'
 import { siteConfig } from '@/data/site'
 import { SITE } from '@/lib/site'
 import { t } from '@/i18n'
@@ -99,5 +100,7 @@ avatar: {{ author.avatar }}</code></pre>
         </Card>
       </section>
     </div>
+
+    <SiteFooter />
   </div>
 </template>

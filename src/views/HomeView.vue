@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { ChevronLeft, ChevronRight, CornerDownLeft } from 'lucide-vue-next'
 import PostCard from '@/components/PostCard.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 import { getHomePosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
 
@@ -703,6 +704,8 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+
+      <SiteFooter v-if="isVerticalHome" />
     </div>
 
     <!-- 底部分页条：页码数字按钮 + 前后步进 + 快速跳转输入框 -->
@@ -789,6 +792,8 @@ onUnmounted(() => {
         </button>
       </form>
     </nav>
+
+    <SiteFooter v-if="!isVerticalHome" />
   </div>
 </template>
 

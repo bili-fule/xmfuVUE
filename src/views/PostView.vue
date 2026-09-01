@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 // import GiscusComment from '@/components/GiscusComment.vue'
 import Lightbox from '@/components/Lightbox.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 import { getPostBySlug, formatDate } from '@/data/posts'
 import { t } from '@/i18n'
 
@@ -430,6 +431,8 @@ function coverBackground(cover: string): string {
       </div>
     </div>
 
+    <SiteFooter />
+
     <!-- 回到顶部悬浮按钮 -->
     <Transition name="fade">
       <button
@@ -464,6 +467,7 @@ function coverBackground(cover: string): string {
         <RouterLink to="/">{{ t('post.backHome') }}</RouterLink>
       </Button>
     </div>
+    <SiteFooter />
   </div>
 </template>
 
