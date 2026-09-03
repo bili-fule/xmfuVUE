@@ -19,7 +19,6 @@ const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
   { name: t('nav.friends') || '友链', path: '/friends', icon: Users },
   { name: t('nav.about') || '关于', path: '/about', icon: User },
-  { name: 'Beta 对比', path: '/beta', icon: Sparkles, isBeta: true },
 ])
 
 function isActive(path: string): boolean {
@@ -116,12 +115,10 @@ watch(
               :class="[
                 isActive(item.path)
                   ? 'text-primary bg-primary/10 font-semibold'
-                  : item.isBeta
-                    ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
               ]"
             >
-              <component :is="item.icon" class="size-3.5 sm:size-4" :class="item.isBeta && !isActive(item.path) ? 'text-amber-500 animate-pulse' : ''" />
+              <component :is="item.icon" class="size-3.5 sm:size-4" />
               <span>{{ item.name }}</span>
             </RouterLink>
         </nav>
@@ -195,13 +192,11 @@ watch(
               :class="[
                 isActive(item.path)
                   ? 'bg-primary/10 text-primary font-semibold'
-                  : item.isBeta
-                    ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               ]"
               @click="closeMobileMenu"
             >
-              <component :is="item.icon" class="size-4" :class="item.isBeta && !isActive(item.path) ? 'text-amber-500 animate-pulse' : ''" />
+              <component :is="item.icon" class="size-4" />
               <span>{{ item.name }}</span>
             </RouterLink>
           </nav>

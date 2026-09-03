@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Clock, Folder, Bot, MessageSquareText, ImageOff, Image as ImageIcon } from 'lucide-vue-next'
+import { Calendar, Clock, Folder, Bot, MessageSquareText, Image as ImageIcon } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, type Post } from '@/data/posts'
 import { t } from '@/i18n'

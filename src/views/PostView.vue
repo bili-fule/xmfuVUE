@@ -32,8 +32,10 @@ const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
 const allPosts = computed(() => getAllPublishedPosts())
 const currentIndex = computed(() => allPosts.value.findIndex((p) => p.slug === props.slug))
-const prevPost = computed<Post | null>(() => (currentIndex.value >= 0 ? allPosts.value[currentIndex.value + 1] || null : null))
-const nextPost = computed<Post | null>(() => (currentIndex.value > 0 ? allPosts.value[currentIndex.value - 1] || null : null))
+// 左侧：越靠近现在、更新的文章（Newer post，即 index - 1）
+const newerPost = computed<Post | null>(() => (currentIndex.value > 0 ? allPosts.value[currentIndex.value - 1] || null : null))
+// 右侧：越往以前、更古老的历史文章（Older post，即 index + 1）
+const olderPost = computed<Post | null>(() => (currentIndex.value >= 0 && currentIndex.value < allPosts.value.length - 1 ? allPosts.value[currentIndex.value + 1] || null : null))
 const backPath = '/'
 const backLabel = computed(() => t('post.back'))
 const downloadBase = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/downloads`
@@ -518,50 +520,50 @@ function coverBackground(cover: string): string {
 
       <Separator />
 
-      <!-- 文末延伸阅读：上一篇与下一篇导航卡片 -->
+      <!-- 文末延伸阅读：左侧较新文章（回到现在）与 右侧较旧文章（探索历史） -->
       <nav
-        v-if="prevPost || nextPost"
+        v-if="newerPost || olderPost"
         class="grid grid-cols-1 sm:grid-cols-2 gap-4 select-none"
         aria-label="前后文章导航"
       >
-        <!-- 上一篇 -->
+        <!-- 左侧：较新文章（更靠近现在） -->
         <RouterLink
-          v-if="prevPost"
-          :to="`/post/${prevPost.slug}`"
+          v-if="newerPost"
+          :to="`/post/${newerPost.slug}`"
           class="group flex flex-col justify-between p-4 rounded-xl border border-border/70 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all duration-300"
         >
           <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
             <ArrowLeft class="size-3.5 transition-transform group-hover:-translate-x-1" />
-            <span>上一篇</span>
+            <span>{{ t('post.newer') }}</span>
           </div>
           <div class="mt-2 space-y-1">
             <h4 class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-              {{ prevPost.title }}
+              {{ newerPost.title }}
             </h4>
             <p class="text-[11px] text-muted-foreground">
-              {{ formatDate(prevPost.date) }} · {{ prevPost.category || '默认' }}
+              {{ formatDate(newerPost.date) }} · {{ newerPost.category || '默认' }}
             </p>
           </div>
         </RouterLink>
         <div v-else class="hidden sm:block" />
 
-        <!-- 下一篇 -->
+        <!-- 右侧：较旧文章（探索历史深处） -->
         <RouterLink
-          v-if="nextPost"
-          :to="`/post/${nextPost.slug}`"
+          v-if="olderPost"
+          :to="`/post/${olderPost.slug}`"
           class="group flex flex-col justify-between p-4 rounded-xl border border-border/70 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all duration-300 text-right"
-          :class="{ 'sm:col-start-2': !prevPost }"
+          :class="{ 'sm:col-start-2': !newerPost }"
         >
           <div class="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
-            <span>下一篇</span>
+            <span>{{ t('post.older') }}</span>
             <ArrowRight class="size-3.5 transition-transform group-hover:translate-x-1" />
           </div>
           <div class="mt-2 space-y-1">
             <h4 class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-              {{ nextPost.title }}
+              {{ olderPost.title }}
             </h4>
             <p class="text-[11px] text-muted-foreground">
-              {{ formatDate(nextPost.date) }} · {{ nextPost.category || '默认' }}
+              {{ formatDate(olderPost.date) }} · {{ olderPost.category || '默认' }}
             </p>
           </div>
         </RouterLink>
