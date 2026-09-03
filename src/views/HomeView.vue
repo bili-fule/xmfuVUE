@@ -44,8 +44,8 @@ const { width: trackWidth, height: trackHeight } = useElementSize(trackRef)
 
 const PAGE_GAP = 16
 const PAGE_MAX_WIDTH = 1280
-const CARD_MIN_WIDTH = 340
-const CARD_MIN_HEIGHT = 260
+const CARD_MIN_WIDTH = 320
+const CARD_MIN_HEIGHT = 240
 const HOME_PAGE_STORAGE_KEY = 'fulieblog:home-page-index'
 
 let pageRestored = false
@@ -187,10 +187,8 @@ function getColumnCount(width: number): number {
   const contentWidth = getPageContentWidth(width)
   if (!contentWidth) return 1
 
-  return Math.max(
-    1,
-    Math.min(3, Math.floor((contentWidth + PAGE_GAP) / (CARD_MIN_WIDTH + PAGE_GAP))),
-  )
+  const calculatedCols = Math.floor((contentWidth + PAGE_GAP) / (CARD_MIN_WIDTH + PAGE_GAP))
+  return Math.max(1, Math.min(3, calculatedCols))
 }
 
 const layout = computed<LayoutConfig>(() => {
@@ -199,6 +197,7 @@ const layout = computed<LayoutConfig>(() => {
     ? trackHeight.value || Math.max(viewportHeight.value - 160, CARD_MIN_HEIGHT)
     : 640
   const cols = getColumnCount(width)
+  // 如果可视区可用高度放不下两行完整卡片与间距，则自动收缩为 1 行；如果只剩 1 列也切为 1 行
   const rows = cols === 1 ? 1 : height >= CARD_MIN_HEIGHT * 2 + PAGE_GAP ? 2 : 1
 
   return { cols, rows, perPage: cols * rows }
@@ -567,17 +566,17 @@ onUnmounted(() => {
         >
           <div class="mx-auto flex w-full max-w-7xl min-h-full flex-col justify-start px-4 py-2 md:px-8 md:py-3">
             <div
-              class="grid w-full auto-rows-min gap-4 transition-all duration-300"
+              class="grid w-full auto-rows-fr gap-4 transition-all duration-300"
               :class="[gridColsClass]"
-              :style="{ gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, auto))` }"
+              :style="{ gridTemplateRows: `repeat(${layout.rows}, minmax(${CARD_MIN_HEIGHT}px, 1fr))` }"
             >
               <RouterLink
                 v-for="post in page"
                 :key="post.slug"
                 :to="`/post/${post.slug}`"
-                class="group flex min-h-0 col-span-1 min-w-0 max-w-full"
+                class="group flex h-full min-h-0 col-span-1 min-w-0 max-w-full"
               >
-                <PostCard :post="post" compact class="w-full" />
+                <PostCard :post="post" compact class="h-full w-full" />
               </RouterLink>
             </div>
           </div>

@@ -23,15 +23,15 @@ function coverBackground(cover: string): string {
 
 <template>
   <article
-    class="group relative flex w-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card/85 text-card-foreground shadow-xs backdrop-blur-xs transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+    class="group relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card/85 text-card-foreground shadow-xs backdrop-blur-xs transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
   >
     <!-- 移动端优先：图文并茂的响应式排版 -->
-    <div class="flex flex-1 flex-col sm:flex-col">
+    <div class="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <!-- 移动端顶部/右侧缩略图区域 -->
       <div
         class="relative overflow-hidden bg-muted/40 transition-all duration-300"
         :class="compact
-          ? 'h-36 w-full shrink-0 sm:h-36'
+          ? 'h-28 w-full shrink-0 sm:h-32'
           : 'h-40 w-full shrink-0 sm:h-44'"
       >
         <img
@@ -69,23 +69,26 @@ function coverBackground(cover: string): string {
       </div>
 
       <!-- 内容正文区 -->
-      <div class="flex flex-1 flex-col justify-between p-4 sm:p-5">
-        <div class="space-y-2">
-          <!-- AI 原稿标签 -->
-          <div v-if="post.origin === 'ai'" class="flex flex-wrap items-center gap-2 text-[11px] font-medium text-primary">
-            <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5">
-              <Bot class="size-3" />
-              {{ t('post.aiOriginal') }}
-            </span>
-            <span v-if="post.prompt || post.conversation.length > 0" class="inline-flex items-center gap-1 text-muted-foreground">
-              <MessageSquareText class="size-3" />
-              {{ t('post.conversation') }}
-            </span>
+      <div class="flex min-h-0 flex-1 flex-col justify-between overflow-hidden p-3.5 sm:p-4">
+        <div class="min-h-0 space-y-1.5 overflow-hidden">
+          <!-- AI 原稿标签（固定高度占位，确保有无 AI 原稿卡片高度完全一致） -->
+          <div class="flex h-5 items-center gap-2 text-[11px] font-medium">
+            <template v-if="post.origin === 'ai'">
+              <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                <Bot class="size-3" />
+                {{ t('post.aiOriginal') }}
+              </span>
+              <span v-if="post.prompt || post.conversation.length > 0" class="inline-flex items-center gap-1 text-muted-foreground">
+                <MessageSquareText class="size-3" />
+                {{ t('post.conversation') }}
+              </span>
+            </template>
           </div>
 
           <!-- 标题 -->
           <h2
-            class="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
+            class="text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
+            :class="compact ? 'line-clamp-1' : 'line-clamp-2'"
           >
             {{ post.title }}
           </h2>
@@ -95,21 +98,23 @@ function coverBackground(cover: string): string {
             {{ post.excerpt }}
           </p>
 
-          <!-- 标签 -->
-          <div v-if="post.tags && post.tags.length > 0" class="flex flex-wrap gap-1.5 pt-1">
-            <Badge
-              v-for="tag in post.tags.slice(0, 3)"
-              :key="tag"
-              variant="secondary"
-              class="px-1.5 py-0 text-[10px] font-normal sm:text-xs"
-            >
-              # {{ tag }}
-            </Badge>
+          <!-- 标签（固定高度占位，防止换行或有无标签导致高度不一致） -->
+          <div class="flex h-5 items-center gap-1.5 overflow-hidden pt-0.5">
+            <template v-if="post.tags && post.tags.length > 0">
+              <Badge
+                v-for="tag in post.tags.slice(0, 2)"
+                :key="tag"
+                variant="secondary"
+                class="shrink-0 px-1.5 py-0 text-[10px] font-normal sm:text-xs"
+              >
+                # {{ tag }}
+              </Badge>
+            </template>
           </div>
         </div>
 
         <!-- 底部发布信息 -->
-        <div class="mt-4 flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground sm:text-xs">
+        <div class="mt-2 flex shrink-0 items-center justify-between border-t border-border/40 pt-2 text-[11px] text-muted-foreground sm:text-xs">
           <div class="inline-flex items-center gap-1.5">
             <Calendar class="size-3.5 opacity-70" />
             <time :datetime="post.date">{{ formatDate(post.date) }}</time>
