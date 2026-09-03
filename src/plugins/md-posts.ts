@@ -38,7 +38,7 @@ const RESOLVED_VIRTUAL_ID = '\0' + VIRTUAL_ID
 function highlightCode(str: string, lang: string): string {
   if (lang && hljs.getLanguage(lang)) {
     try {
-      return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`
+      return `<pre class="hljs"><code class="language-${lang}">${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`
     } catch {
       // 语言解析失败时回退到普通转义
     }

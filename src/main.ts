@@ -10,9 +10,21 @@ import 'highlight.js/styles/github-dark.css'
 // SSR 渲染时 router.afterEach 也会触发，用 @unhead 的 head.push 把每页 <title>/<meta> 注入静态 HTML。
 export const createApp = ViteSSG(
   App,
-  { routes, base: import.meta.env.BASE_URL },
+  {
+    routes,
+    base: import.meta.env.BASE_URL,
+    scrollBehavior(to, from, savedPosition) {
+      if (savedPosition) {
+        return savedPosition
+      }
+      return { top: 0, left: 0 }
+    },
+  },
   ({ app, router, head }) => {
     router.afterEach((to) => {
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+      }
       if (!head) return
       const post = to.name === 'post' && typeof to.params.slug === 'string'
         ? getPostBySlug(to.params.slug)

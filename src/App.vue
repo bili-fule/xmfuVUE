@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
-import { Moon, Sun, Home, Users, User, Search, Menu, X } from 'lucide-vue-next'
+import { Moon, Sun, Home, Users, User, Search, Menu, X, Sparkles } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SearchModal from '@/components/SearchModal.vue'
 import { siteConfig } from '@/data/site'
@@ -19,6 +19,7 @@ const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
   { name: t('nav.friends') || '友链', path: '/friends', icon: Users },
   { name: t('nav.about') || '关于', path: '/about', icon: User },
+  { name: 'Beta 对比', path: '/beta', icon: Sparkles, isBeta: true },
 ])
 
 function isActive(path: string): boolean {
@@ -58,6 +59,33 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
+// 路由跳转后直接、立即回到顶部（全端兼容：window + 内部滚动容器）
+watch(
+  () => route.fullPath,
+  (toPath, fromPath) => {
+    if (toPath === fromPath) return
+    nextTick(() => {
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+      }
+      if (typeof document !== 'undefined') {
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+
+        // 重置内部所有的垂直滚动容器（如 PostView、AboutView、FriendsView 等）
+        const scrollables = document.querySelectorAll<HTMLElement>('.overflow-y-auto, [class*="overflow-y-auto"]')
+        scrollables.forEach((el) => {
+          if (!el.classList.contains('home-track')) {
+            el.style.scrollBehavior = 'auto'
+            el.scrollTop = 0
+            el.style.scrollBehavior = ''
+          }
+        })
+      }
+    })
+  },
+)
+
 </script>
 
 <template>
@@ -88,10 +116,12 @@ onUnmounted(() => {
               :class="[
                 isActive(item.path)
                   ? 'text-primary bg-primary/10 font-semibold'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  : item.isBeta
+                    ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
               ]"
             >
-              <component :is="item.icon" class="size-3.5 sm:size-4" />
+              <component :is="item.icon" class="size-3.5 sm:size-4" :class="item.isBeta && !isActive(item.path) ? 'text-amber-500 animate-pulse' : ''" />
               <span>{{ item.name }}</span>
             </RouterLink>
         </nav>
@@ -165,11 +195,13 @@ onUnmounted(() => {
               :class="[
                 isActive(item.path)
                   ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                  : item.isBeta
+                    ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               ]"
               @click="closeMobileMenu"
             >
-              <component :is="item.icon" class="size-4" />
+              <component :is="item.icon" class="size-4" :class="item.isBeta && !isActive(item.path) ? 'text-amber-500 animate-pulse' : ''" />
               <span>{{ item.name }}</span>
             </RouterLink>
           </nav>

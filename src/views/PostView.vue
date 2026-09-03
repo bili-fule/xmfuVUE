@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Bot,
   Calendar,
@@ -20,7 +21,7 @@ import { Separator } from '@/components/ui/separator'
 // import GiscusComment from '@/components/GiscusComment.vue'
 import Lightbox from '@/components/Lightbox.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
-import { getPostBySlug, formatDate } from '@/data/posts'
+import { getAllPublishedPosts, getPostBySlug, formatDate, type Post } from '@/data/posts'
 import { t } from '@/i18n'
 
 interface Props {
@@ -29,6 +30,10 @@ interface Props {
 
 const props = defineProps<Props>()
 const post = computed(() => getPostBySlug(props.slug))
+const allPosts = computed(() => getAllPublishedPosts())
+const currentIndex = computed(() => allPosts.value.findIndex((p) => p.slug === props.slug))
+const prevPost = computed<Post | null>(() => (currentIndex.value >= 0 ? allPosts.value[currentIndex.value + 1] || null : null))
+const nextPost = computed<Post | null>(() => (currentIndex.value > 0 ? allPosts.value[currentIndex.value - 1] || null : null))
 const backPath = '/'
 const backLabel = computed(() => t('post.back'))
 const downloadBase = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/downloads`
@@ -144,20 +149,120 @@ function bindImageClicksAndObserve() {
   headings.forEach((h) => headingObserver?.observe(h))
 }
 
+function enhanceCodeBlocks() {
+  if (!contentContainerRef.value) return
+  const preElements = contentContainerRef.value.querySelectorAll('pre')
+  preElements.forEach((pre) => {
+    if (pre.getAttribute('data-enhanced') === 'true') return
+    pre.setAttribute('data-enhanced', 'true')
+
+    const code = pre.querySelector('code')
+    let lang = ''
+    if (code) {
+      const langClass = Array.from(code.classList).find((c) => c.startsWith('language-'))
+      if (langClass) {
+        lang = langClass.replace('language-', '').toUpperCase()
+      }
+    }
+
+    const wrapper = document.createElement('div')
+    wrapper.className = 'code-block-wrapper my-6 overflow-hidden rounded-xl border border-border/80 bg-[#0d1117] shadow-lg'
+
+    const header = document.createElement('div')
+    header.className = 'flex items-center justify-between border-b border-zinc-800/80 bg-zinc-900/90 px-4 py-2 text-xs select-none'
+
+    const left = document.createElement('div')
+    left.className = 'flex items-center gap-2'
+    left.innerHTML = `
+      <div class="flex items-center gap-1.5">
+        <span class="size-3 rounded-full bg-[#ff5f56] inline-block"></span>
+        <span class="size-3 rounded-full bg-[#ffbd2e] inline-block"></span>
+        <span class="size-3 rounded-full bg-[#27c93f] inline-block"></span>
+      </div>
+      ${lang ? `<span class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider pl-2">${lang}</span>` : ''}
+    `
+
+    const copyBtn = document.createElement('button')
+    copyBtn.type = 'button'
+    copyBtn.className = 'inline-flex items-center gap-1 rounded bg-zinc-800/80 hover:bg-zinc-700 px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition-colors cursor-pointer'
+    copyBtn.innerHTML = `
+      <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      <span>复制</span>
+    `
+
+    copyBtn.addEventListener('click', async () => {
+      const codeText = code ? code.innerText : pre.innerText
+      try {
+        await navigator.clipboard.writeText(codeText)
+        copyBtn.innerHTML = `
+          <svg class="size-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          <span class="text-emerald-400 font-semibold">已复制</span>
+        `
+        setTimeout(() => {
+          copyBtn.innerHTML = `
+            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span>复制</span>
+          `
+        }, 2000)
+      } catch (err) {
+        console.error('Failed to copy code: ', err)
+      }
+    })
+
+    header.appendChild(left)
+    header.appendChild(copyBtn)
+
+    pre.parentNode?.insertBefore(wrapper, pre)
+    wrapper.appendChild(header)
+    wrapper.appendChild(pre)
+    pre.className = 'p-4 text-xs font-mono text-zinc-200 overflow-x-auto bg-[#0d1117] leading-relaxed m-0 rounded-none'
+  })
+}
+
+function resetScrollPosition() {
+  if (scrollContainerRef.value) {
+    scrollContainerRef.value.style.scrollBehavior = 'auto'
+    scrollContainerRef.value.scrollTop = 0
+    nextTick(() => {
+      if (scrollContainerRef.value) {
+        scrollContainerRef.value.scrollTop = 0
+        scrollContainerRef.value.style.scrollBehavior = ''
+      }
+    })
+  }
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  }
+}
+
+watch(
+  () => props.slug,
+  () => {
+    resetScrollPosition()
+  },
+)
+
 watch(
   () => post.value?.contentHtml,
   () => {
+    resetScrollPosition()
     extractToc()
     nextTick(() => {
       bindImageClicksAndObserve()
+      enhanceCodeBlocks()
     })
   },
   { immediate: true },
 )
 
 onMounted(() => {
+  resetScrollPosition()
   nextTick(() => {
+    resetScrollPosition()
     bindImageClicksAndObserve()
+    enhanceCodeBlocks()
   })
 })
 
@@ -412,6 +517,55 @@ function coverBackground(cover: string): string {
       </div>
 
       <Separator />
+
+      <!-- 文末延伸阅读：上一篇与下一篇导航卡片 -->
+      <nav
+        v-if="prevPost || nextPost"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-4 select-none"
+        aria-label="前后文章导航"
+      >
+        <!-- 上一篇 -->
+        <RouterLink
+          v-if="prevPost"
+          :to="`/post/${prevPost.slug}`"
+          class="group flex flex-col justify-between p-4 rounded-xl border border-border/70 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all duration-300"
+        >
+          <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+            <ArrowLeft class="size-3.5 transition-transform group-hover:-translate-x-1" />
+            <span>上一篇</span>
+          </div>
+          <div class="mt-2 space-y-1">
+            <h4 class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+              {{ prevPost.title }}
+            </h4>
+            <p class="text-[11px] text-muted-foreground">
+              {{ formatDate(prevPost.date) }} · {{ prevPost.category || '默认' }}
+            </p>
+          </div>
+        </RouterLink>
+        <div v-else class="hidden sm:block" />
+
+        <!-- 下一篇 -->
+        <RouterLink
+          v-if="nextPost"
+          :to="`/post/${nextPost.slug}`"
+          class="group flex flex-col justify-between p-4 rounded-xl border border-border/70 bg-card/70 hover:bg-card hover:border-primary/50 hover:shadow-md transition-all duration-300 text-right"
+          :class="{ 'sm:col-start-2': !prevPost }"
+        >
+          <div class="flex items-center justify-end gap-1.5 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+            <span>下一篇</span>
+            <ArrowRight class="size-3.5 transition-transform group-hover:translate-x-1" />
+          </div>
+          <div class="mt-2 space-y-1">
+            <h4 class="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+              {{ nextPost.title }}
+            </h4>
+            <p class="text-[11px] text-muted-foreground">
+              {{ formatDate(nextPost.date) }} · {{ nextPost.category || '默认' }}
+            </p>
+          </div>
+        </RouterLink>
+      </nav>
 
       <!--
       <section class="space-y-4 pt-4">
