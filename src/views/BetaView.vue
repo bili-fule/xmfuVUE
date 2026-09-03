@@ -11,15 +11,18 @@ import {
   Bookmark,
   ChevronDown,
   RefreshCw,
-  Terminal,
-  Coffee,
-  Rocket,
-  Cat,
-  MessageCircle,
-  Calendar,
+  Layout,
+  Layers,
+  PanelLeft,
+  PanelsTopLeft,
+  PictureInPicture,
+  Box,
+  Monitor,
+  Component,
+  Compass,
+  FileText,
   Clock,
-  Heart,
-  Zap,
+  Image as ImageIcon,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SiteFooter from '@/components/SiteFooter.vue'
@@ -28,186 +31,167 @@ import { getHomePosts } from '@/data/posts'
 const posts = getHomePosts()
 
 // ==========================================
-// 动漫 OC 风格化方案数据 (OC Stylization Schemes)
+// 动漫 OC 融入 UI 架构方案数据 (UI Layout Schemes)
 // ==========================================
-export interface OcScheme {
-  id: 'cyber' | 'warm' | 'aurora' | 'minimal'
+export interface UiLayoutScheme {
+  id: 'sticky-sidebar' | 'cinematic-hero' | 'floating-widget' | 'card-overflow'
   name: string
-  subtitle: string
-  themeBadge: string
-  accentName: string
-  primaryHex: string
-  bgPreview: string
-  cardBg: string
-  borderClass: string
+  titleEn: string
+  tag: string
+  layoutRatio: string
+  ocPlacementTag: string
   icon: any
-  ocName: string
-  ocRole: string
-  ocAvatarEmoji: string
-  ocStatus: string
-  quote: string
-  dialoguePool: string[]
-  sampleCardTitle: string
-  sampleCardExcerpt: string
-  features: string[]
-  recommendedFor: string
-  assetRequirements: string
+  summary: string
+  pros: string[]
+  cons: string[]
+  wireframe: {
+    hasLeftSidebar: boolean
+    hasTopHero: boolean
+    hasFloatingWidget: boolean
+    hasOverflowCard: boolean
+    ocLocationText: string
+  }
+  specDetails: {
+    desktopGrid: string
+    mobileBehavior: string
+    assetSpecs: string
+    styleAesthetic: string
+  }
 }
 
-const ocSchemes: OcScheme[] = [
+const uiSchemes: UiLayoutScheme[] = [
   {
-    id: 'cyber',
-    name: '赛博极客终端',
-    subtitle: 'Cyber-Terminal // 霓虹冰蓝 · HUD 线框 · AI 虚拟助手',
-    themeBadge: '极客科幻感',
-    accentName: '霓虹冰蓝 (#00f0ff) & 赛博暗晶',
-    primaryHex: '#00f0ff',
-    bgPreview: 'bg-[#080d16] text-[#e2f3ff]',
-    cardBg: 'bg-[#0e1626]/90',
-    borderClass: 'border-[#00f0ff]/40 shadow-[0_0_20px_rgba(0,240,255,0.15)]',
-    icon: Terminal,
-    ocName: 'Zero-Core (零号核心)',
-    ocRole: 'AI 虚拟协作者 / 终端守护者',
-    ocAvatarEmoji: '🤖',
-    ocStatus: 'ONLINE // 神经元网络握手中 (Ping: 12ms)',
-    quote: '[OC CORE 协同校验]：代码 AST 语法树检测完毕，暂未发现内存泄漏风险。',
-    dialoguePool: [
-      '“终端链路心跳正常！主人今天也在努力攻克新架构呢 (´▽`ʃ♡ƪ)”',
-      '“检测到新的访客会话，已为您加载边缘节点缓存数据包。”',
-      '“主人写代码太专注啦，零号核心已自动为您调暗屏幕蓝光保护视力！”',
-      '“警告：检测到咖啡因摄入不足，建议立即执行补充拿铁协议 ☕”',
+    id: 'sticky-sidebar',
+    name: '方案 A：侧边立绘固定展台',
+    titleEn: 'Sticky 3:7 Sidebar Architecture',
+    tag: '经典二次元双栏',
+    layoutRatio: '桌面 3:7 黄金比例双栏 (320px + 1fr)',
+    ocPlacementTag: '左侧竖幅立绘常驻展台 (Sticky Top)',
+    icon: PanelLeft,
+    summary: '在屏幕左侧规划 320px~360px 的独立展台卡片。正文向下滚动时，左侧立绘始终粘性固定（sticky top-20），无论翻到哪一段，角色始终在左侧视线范围内陪伴，极具个人站专属感。',
+    pros: [
+      '立绘展示面积大，半身甚至全身立绘都能从容展现',
+      '长文滚动全程陪伴，品牌辨识度与个人站氛围最浓厚',
+      '左侧卡片可一并收纳个人名片、社交图标、分类导航与音乐播放器',
     ],
-    sampleCardTitle: '基于 Vite-SSG 的客户端增量预渲染与自动化管线实践',
-    sampleCardExcerpt: '解析现代静态站点生成器在极客架构下的执行机理，结合 Service Worker 实现零等待离线化体验...',
-    features: [
-      '背景融入 24px 精细科技网格与微点阵（Cyber Grid）',
-      '卡片四角带有科技倒角符号 [+] 与状态码标识',
-      'AI 原稿模块与 OC 人设深度绑定，由 OC 署名实验分析日志',
-      '日夜模式：白天为浅冷灰 HUD，暗黑模式化身霓虹流光暗晶',
+    cons: [
+      '要求桌面屏幕宽度（>=1280px）较充裕，才能完整展开 3:7 双栏',
+      '移动端（<768px）受限于竖屏宽度，必须将左栏折叠到底部或移动端抽屉中',
     ],
-    recommendedFor: '黑客、科幻、机巧科技、赛博猫耳少女/少年人设',
-    assetRequirements: '建议准备：半身发光透明底立绘、科技感方形头像、Q版报错表情包',
+    wireframe: {
+      hasLeftSidebar: true,
+      hasTopHero: false,
+      hasFloatingWidget: false,
+      hasOverflowCard: false,
+      ocLocationText: '左侧 320px 竖幅吸顶展台',
+    },
+    specDetails: {
+      desktopGrid: 'grid grid-cols-12 gap-8 (左侧 col-span-4 粘性吸顶，右侧 col-span-8 文章流)',
+      mobileBehavior: '移动端自适应折叠为顶部横幅名片或抽屉侧边栏，不挤占竖屏正文空间',
+      assetSpecs: '推荐 3:4 或 9:16 高清透明底立绘（PNG / WebP），分辨率建议 800x1200 以上',
+      styleAesthetic: '经典日系独立博客风、双栏卡片错落、半透明毛玻璃微底衬',
+    },
   },
   {
-    id: 'warm',
-    name: '日系温润书社',
-    subtitle: 'Warm Anime Sanctuary // 暖木米白 · 柔和圆角 · 伴读看板娘',
-    themeBadge: '温柔治愈系',
-    accentName: '浅抹茶绿 (#10b981) & 暖木奶茶棕 (#f59e0b)',
-    primaryHex: '#10b981',
-    bgPreview: 'bg-[#faf8f5] dark:bg-[#1a1816] text-[#2c2621] dark:text-[#ede4db]',
-    cardBg: 'bg-white/90 dark:bg-[#24201c]/90',
-    borderClass: 'border-[#10b981]/30 shadow-[0_8px_30px_rgba(16,185,129,0.08)]',
-    icon: Coffee,
-    ocName: '小禾 (Chiyo)',
-    ocRole: '伴读看板娘 / 治愈系图书管理员',
-    ocAvatarEmoji: '🌸',
-    ocStatus: '☕ 冲泡拿铁摸鱼中... 闻到了咖啡与书页的香气',
-    quote: '🌸 「今天写代码辛苦啦！读完了就好好伸个懒腰休息一下吧~」',
-    dialoguePool: [
-      '“咕嘟咕嘟... 累了吗？先喝杯温热的玄米茶吧 (｡♥‿♥｡)”',
-      '“今天窗外的阳光真好呢，要不要读完这篇去阳台走走？”',
-      '“悄悄往你的代码仓库里塞了一颗甜甜的水果糖 🍬”',
-      '“写不出思路的时候不要急，小禾会一直陪在你身边的哦 ฅ^•ﻌ•^ฅ”',
+    id: 'cinematic-hero',
+    name: '方案 B：宽屏映画大画幅 Hero',
+    titleEn: 'Cinematic Wide Hero Banner',
+    tag: '二游官网视觉冲击',
+    layoutRatio: '首屏 100% 全宽海报 + 规整卡片网格',
+    ocPlacementTag: '首屏全景透明立绘贯穿',
+    icon: PanelsTopLeft,
+    summary: '借鉴现代二次元游戏（如米哈游、鹰角二游官网）的设计范式。首页首屏为大画幅宽屏视窗（高度约 380px~460px），立绘以大比例贯穿切入；向下滑动后直接进入工整现代的卡片网格。',
+    pros: [
+      '第一眼视觉冲击力极强，拥有类似动画官网或游戏发布页的高级质感',
+      '正文区依然是标准网格卡片，不影响阅读效率与信息排列',
+      '进入文章内页后 Hero 自然收起，完全不抢占技术文章阅读空间',
     ],
-    sampleCardTitle: '午后随笔：在 Vue 3 的响应式世界里写一封情书',
-    sampleCardExcerpt: '从单向数据流到组件生命周期，技术有时候也像生活一样，需要细细梳理每一个细微的状态改变...',
-    features: [
-      '全站圆润大弧度（rounded-2xl）与漫反射轻柔阴影，温润耐看',
-      '文末配有手绘风专属签名印章与治愈小台词',
-      '右下角看板娘微挂件，随时可点击吐出暖心互动气泡',
-      '日夜模式联动：白天是阳光咖啡馆常态，夜晚切换为戴睡帽抱枕睡眠态',
+    cons: [
+      '首屏垂直高度占用较大，首屏展示的文章条目较少（需下滚一行）',
+      '需要一张高精度、无边缘生硬裁切的大画幅立绘或横版壁纸',
     ],
-    recommendedFor: '日常系软萌妹、图书管理员、咖啡师、魔女学徒等温柔治愈 OC',
-    assetRequirements: '建议准备：暖色透明底立绘、Q版喝茶/睡觉表情、手写风格签名字迹',
+    wireframe: {
+      hasLeftSidebar: false,
+      hasTopHero: true,
+      hasFloatingWidget: false,
+      hasOverflowCard: false,
+      ocLocationText: '首屏全宽映画 Hero Banner 贯穿浮动',
+    },
+    specDetails: {
+      desktopGrid: '顶部 h-[420px] 视差横幅 + 底部 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+      mobileBehavior: '移动端立绘按比例居中自适应置底，标题文字悬浮上方保持海报质感',
+      assetSpecs: '推荐高分辨率横版插画，或大比例透明底半身立绘（分辨率 1920x1080 或 1200x1200+）',
+      styleAesthetic: '二游科技机能感、斜切角修饰线、流光弥散光晕与大面积留白',
+    },
   },
   {
-    id: 'aurora',
-    name: '幻彩极光机能',
-    subtitle: 'Aero Aurora // 太空银灰 · 极光流光 · 2.5D 破框立绘',
-    themeBadge: '未来星芒感',
-    accentName: '极光幻彩紫青 (linear-gradient) & 纯净太空银',
-    primaryHex: '#8b5cf6',
-    bgPreview: 'bg-[#0f172a] text-[#f8fafc]',
-    cardBg: 'bg-[#1e293b]/80 backdrop-blur-xl',
-    borderClass: 'border-violet-500/40 shadow-[0_0_25px_rgba(139,92,246,0.18)]',
-    icon: Rocket,
-    ocName: '星穹 (Astraea)',
-    ocRole: '空间站领航员 / 星际观测者',
-    ocAvatarEmoji: '✨',
-    ocStatus: '🛸 空间曲率正常 // 航向标：银河外旋臂 #082',
-    quote: '✨ 「航向标已锁定下一个架构跃迁点，保持全速推进。」',
-    dialoguePool: [
-      '“星图坐标已校准！舰长，接下来要去哪个星系写代码？”',
-      '“能量矩阵充能完毕，随时可以执行下一个生产版本发布指令！”',
-      '“在刚刚的光年旅途中，捕捉到了一颗为你许愿的流星数据包 🌠”',
-      '“星际长途漫漫，但有你的代码作为指引，航向永远不会迷失。”',
+    id: 'floating-widget',
+    name: '方案 C：悬浮微挂件 + 纯净正文',
+    titleEn: 'Floating Companion & Clean Feed',
+    tag: '克制与沉浸',
+    layoutRatio: '单栏居中纯净流 (max-w-4xl) + 悬浮 FAB 挂件',
+    ocPlacementTag: '右下角圆形微挂件 + 顶部进度跑酷头像',
+    icon: PictureInPicture,
+    summary: '最受技术极客推崇的理智克制方案。整个博客 100% 保持严谨、干净的单栏居中排版（max-w-4xl），角色作为常驻右下角的可交互悬浮小挂件，点击可弹出抽屉名片，顶部阅读进度条终点跟随小头像跑酷。',
+    pros: [
+      '正文阅读 100% 纯净无干扰，长篇代码与技术架构最聚焦',
+      '对屏幕尺寸兼容性最好，无论超宽屏还是窄屏手机都能极佳自适应',
+      '挂件形式极富趣味性，可集成回到顶部、夜间切换、展开立绘等多种实用工具',
     ],
-    sampleCardTitle: '星际跃迁：从传统单体架构迈向现代化云原生微前端',
-    sampleCardExcerpt: '探索在复杂分布式网络拓扑中，如何构建具备高韧性、低时延的跨行星级前端服务治理体系...',
-    features: [
-      '高辨识度 2.5D 破框立绘（角色头部探出卡片上边界，立体层次极强）',
-      '微光流光边框动画（Shimmer Border），随视线流动',
-      '关于页搭载 OC 专属星图能力雷达面板与星际探索日志',
-      '适合：高冷神秘、银发白毛、机甲少女/少年、星空神性人设',
+    cons: [
+      '首屏缺乏大立绘的直接视觉震撼，二次元属性相对低调内敛',
+      '挂件尺寸较小，无法直接大画幅展示立绘细节（需点击后弹出查看）',
     ],
-    recommendedFor: '机甲驾驶员、银白发色、星空探索者、高阶宇宙神官型 OC',
-    assetRequirements: '建议准备：全身/半身高清立绘（支持破框裁切）、星际徽章 Logo',
+    wireframe: {
+      hasLeftSidebar: false,
+      hasTopHero: false,
+      hasFloatingWidget: true,
+      hasOverflowCard: false,
+      ocLocationText: '右下角 FAB 悬浮挂件 + 顶部进度条跑酷小头像',
+    },
+    specDetails: {
+      desktopGrid: 'max-w-4xl mx-auto 单栏居中流 + fixed bottom-6 right-6 悬浮组件',
+      mobileBehavior: '移动端自动适配安全边距，尺寸微缩至 44px 不遮挡滑动',
+      assetSpecs: '推荐 1 张 Q 版萌系头像/全身像（用于挂件常驻），另备 1 张展开查看的大立绘',
+      styleAesthetic: '现代极简 Notion/Linear 极客风 + 萌系微交互点缀',
+    },
   },
   {
-    id: 'minimal',
-    name: '极简探头微吉祥物',
-    subtitle: 'Peeking Mascot // 极致克制 · 现代 Notion · 卡片边缘探头',
-    themeBadge: '极客轻量级',
-    accentName: '纯净黑白质感 + 单点电光灵动橙 (#f97316)',
-    primaryHex: '#f97316',
-    bgPreview: 'bg-background text-foreground',
-    cardBg: 'bg-card/90',
-    borderClass: 'border-border/80 hover:border-orange-500/50 shadow-sm',
-    icon: Cat,
-    ocName: '小豆 (Bean)',
-    ocRole: '代码调试小精灵 / 桌面陪伴吉祥物',
-    ocAvatarEmoji: '🐾',
-    ocStatus: '🐾 趴在卡片边缘静静看你 Coding (眨了眨眼)',
-    quote: '🐾 「没有 Bug 的一天，心情好极了！」',
-    dialoguePool: [
-      '“( •̀ ω •́ )y 探头探脑，发现了一行优美而高效的代码！”',
-      '“瞄——！你正在看这一节吗？小豆也来一起看！”',
-      '“（伸出小肉垫蹭了蹭你的光标）继续加油哇，你是最棒的！”',
-      '“咕噜咕噜... 趴在屏幕角落睡着了 zzz”',
+    id: 'card-overflow',
+    name: '方案 D：2.5D 破框立体穿插',
+    titleEn: '2.5D Card Header Overflow',
+    tag: '打破矩形束缚',
+    layoutRatio: '多层网格 + 负边距立体破框 (-mt-12)',
+    ocPlacementTag: '立绘上半身突破卡片上边框',
+    icon: Box,
+    summary: '打破千篇一律的方形盒子桎梏。利用 CSS 负边距（-mt-12）与分层 Z-Index，让 OC 立绘的头部、发梢或武器直接“伸出”卡片上边框，悬浮在背景之上，产生极其抓人眼球的 2.5D 错觉。',
+    pros: [
+      '设计感极强，打破所有传统模板的单调矩形感，非常前沿新颖',
+      '空间利用极其紧凑，不需要牺牲整整一栏空间，在卡片内部就能玩出空间层次',
+      '可以在卡片边缘或页面拐角加入“探头（Peeking）”的生动细节',
     ],
-    sampleCardTitle: '深入浅出：Vue 3 响应式系统实现原理解析与手写实践',
-    sampleCardExcerpt: '从 Proxy 拦截到 WeakMap 依赖收集，彻底搞懂 effect 与 track 的底层设计哲学...',
-    features: [
-      '100% 保持当前博客严肃、工整、清爽的高水准技术质感',
-      '仅在卡片右上角、搜索框或回到顶部按钮边缘灵动探头（Peeking）',
-      '零多余花哨干扰，但访客互动时会被瞬间萌到',
-      '实施成本极低，只需要一张透明底 Q 版萌系头像即可快速落地',
+    cons: [
+      '对立绘素材要求较高：上边界必须是有机发丝轮廓，不能有生硬的横向切边',
+      '前端 CSS 定位需要精细调整各断点下的负边距，避免移动端与导航条错位重叠',
     ],
-    recommendedFor: '注重严肃技术表达、希望低调克制但充满巧思的开发者',
-    assetRequirements: '建议准备：Q版探头小头像（透明底 PNG）、一两张眨眼/动耳朵表情',
+    wireframe: {
+      hasLeftSidebar: false,
+      hasTopHero: false,
+      hasFloatingWidget: false,
+      hasOverflowCard: true,
+      ocLocationText: '卡片上沿开放式切除，立绘负边距破框向上探出 48px',
+    },
+    specDetails: {
+      desktopGrid: 'grid grid-cols-1 lg:grid-cols-3 gap-6 (破框名片卡 col-span-1)',
+      mobileBehavior: '移动端破框负边距自动收敛（-mt-6），避免覆盖上方组件',
+      assetSpecs: '必须是透明底 PNG/WebP，且角色头部、头饰、发梢完整无横切线',
+      styleAesthetic: '现代轻拟态、弥散景深投影、动态悬浮破框',
+    },
   },
 ]
 
-const activeSchemeIndex = ref(0)
-const currentDialogueIndex = ref(0)
-const isDialoguePopping = ref(false)
-
-const currentScheme = computed(() => ocSchemes[activeSchemeIndex.value])
-
-function triggerOcDialogue() {
-  isDialoguePopping.value = true
-  const pool = currentScheme.value.dialoguePool
-  currentDialogueIndex.value = (currentDialogueIndex.value + 1) % pool.length
-  setTimeout(() => {
-    isDialoguePopping.value = false
-  }, 250)
-}
-
-function selectScheme(index: number) {
-  activeSchemeIndex.value = index
-  currentDialogueIndex.value = 0
-}
+const activeUiIndex = ref(0)
+const currentUiScheme = computed(() => uiSchemes[activeUiIndex.value])
 
 // 对比视图模式：'side-by-side' (并排对比) | 'toggle' (单容器一键切换)
 const viewMode = ref<'side-by-side' | 'toggle'>('side-by-side')
@@ -377,231 +361,385 @@ const sampleCategories = [
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 space-y-16">
 
       <!-- ============================================================ -->
-      <!-- 重点板块：动漫 OC 风格化方案探索实验室 (OC Theme Studio) -->
+      <!-- 重点板块：动漫 OC 融入 UI 架构方案工坊 (UI Architecture Studio) -->
       <!-- ============================================================ -->
       <section class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
           <div class="space-y-1">
             <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1 rounded-full bg-pink-500/10 text-pink-500 font-semibold px-2.5 py-0.5 text-xs">
-                <Heart class="size-3 fill-current" />
-                OC 风格化灵感工坊
+              <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary font-semibold px-2.5 py-0.5 text-xs">
+                <Layout class="size-3" />
+                UI 排版与架构范式
               </span>
-              <span class="text-xs text-muted-foreground">专属角色世界观塑造</span>
+              <span class="text-xs text-muted-foreground">动漫 OC 与现代化博客深度融合</span>
             </div>
             <h2 class="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-              <Sparkles class="size-6 text-primary" />
-              动漫 OC 风格化方案探索实验室
+              <Layers class="size-6 text-primary" />
+              动漫 OC 融入博客 UI 架构设计方案
             </h2>
             <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-3xl">
-              为您的动漫原创角色（OC）量身定制了 4 套截然不同的视觉与交互风格。点击下方方案卡片，即可在<strong>全景沙盒中实时体验色彩、立绘名片、状态栏、气泡对话互动与文章卡片质感</strong>！
+              为解决“动漫 OC 放在网页哪个位置、如何与文章排版共存、避免破坏技术阅读体验”的核心问题，我们设计了 4 套纯粹的 <strong>UI 栅格与视觉空间架构方案</strong>。
             </p>
           </div>
           <span class="shrink-0 inline-flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs text-primary font-medium">
-            4 种设计范式一键切换
+            4 种布局线框直观对比
           </span>
         </div>
 
-        <!-- 方案切换 Tab 卡片网格 -->
+        <!-- 4 种 UI 架构方案切换 Tab -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           <button
-            v-for="(scheme, index) in ocSchemes"
+            v-for="(scheme, index) in uiSchemes"
             :key="scheme.id"
             type="button"
             class="group relative flex flex-col justify-between p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer"
             :class="[
-              activeSchemeIndex === index
+              activeUiIndex === index
                 ? 'border-primary ring-2 ring-primary/30 bg-primary/[0.04] shadow-md scale-[1.01]'
                 : 'border-border/80 bg-card hover:border-primary/40 hover:bg-muted/30'
             ]"
-            @click="selectScheme(index)"
+            @click="activeUiIndex = index"
           >
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <span
                   class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                  :class="activeSchemeIndex === index ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'"
+                  :class="activeUiIndex === index ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'"
                 >
-                  方案 0{{ index + 1 }}
+                  {{ scheme.tag }}
                 </span>
-                <span class="text-xs font-semibold text-primary flex items-center gap-1">
+                <span class="text-xs font-semibold text-primary">
                   <component :is="scheme.icon" class="size-4" />
                 </span>
               </div>
-              <h3 class="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+              <h3 class="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                 {{ scheme.name }}
               </h3>
-              <p class="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                {{ scheme.subtitle }}
+              <p class="text-[11px] text-muted-foreground font-mono">
+                {{ scheme.titleEn }}
               </p>
             </div>
 
             <div class="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-[11px]">
-              <span class="text-muted-foreground font-medium">{{ scheme.themeBadge }}</span>
+              <span class="text-muted-foreground truncate max-w-[120px]">{{ scheme.layoutRatio }}</span>
               <span
-                class="font-semibold transition-colors"
-                :class="activeSchemeIndex === index ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground'"
+                class="font-semibold shrink-0"
+                :class="activeUiIndex === index ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground'"
               >
-                {{ activeSchemeIndex === index ? '正在沙盒预览' : '点击切换预览 →' }}
+                {{ activeUiIndex === index ? '当前查看' : '查看线框 →' }}
               </span>
             </div>
           </button>
         </div>
 
-        <!-- 拟真实景沙盒（Themed Sandbox Live Preview） -->
-        <div
-          class="rounded-3xl border overflow-hidden transition-all duration-500 shadow-xl"
-          :class="currentScheme.borderClass"
-        >
-          <!-- 沙盒顶栏控制条 -->
-          <div class="border-b bg-muted/80 backdrop-blur-md px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div class="flex items-center gap-2">
-              <span class="size-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span class="font-bold text-foreground">实时拟真沙盒：{{ currentScheme.name }}</span>
-              <span class="hidden sm:inline text-muted-foreground">|</span>
-              <span class="text-muted-foreground text-[11px] hidden sm:inline">基调色彩：{{ currentScheme.accentName }}</span>
+        <!-- 交互可视化沙盒：线框示意 + 真实局部排版 + 技术参数 -->
+        <div class="rounded-3xl border border-border/90 bg-card shadow-sm overflow-hidden space-y-6 p-5 sm:p-7">
+          <!-- 头部方案速览摘要 -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-lg font-extrabold text-foreground">{{ currentUiScheme.name }}</span>
+                <span class="rounded bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">
+                  {{ currentUiScheme.ocPlacementTag }}
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                {{ currentUiScheme.summary }}
+              </p>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] text-muted-foreground">角色：</span>
-              <span class="font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full text-[11px]">
-                {{ currentScheme.ocName }}
+            <div class="shrink-0 flex items-center gap-2">
+              <span class="rounded-lg bg-muted px-3 py-1.5 text-xs font-mono text-muted-foreground border border-border/70">
+                栅格比例：{{ currentUiScheme.layoutRatio }}
               </span>
             </div>
           </div>
 
-          <!-- 沙盒内容主体 -->
-          <div class="p-6 sm:p-8 space-y-8" :class="currentScheme.cardBg">
-            <!-- 模块 A：OC 角色名片与动态状态栏 -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              <!-- 左侧：立绘/头像与状态气泡 -->
-              <div class="lg:col-span-7 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <!-- 头像外圈 -->
-                <div class="relative shrink-0">
-                  <div class="size-20 sm:size-24 rounded-2xl flex items-center justify-center text-4xl shadow-lg border-2 border-primary/50 bg-background/90 transition-transform duration-300 hover:scale-105">
-                    {{ currentScheme.ocAvatarEmoji }}
-                  </div>
-                  <!-- 右下角在线角标 -->
-                  <span class="absolute -bottom-1 -right-1 size-5 rounded-full bg-emerald-500 ring-2 ring-background flex items-center justify-center text-[10px] text-white font-bold">
-                    ✓
-                  </span>
-                </div>
-
-                <!-- 角色说明与可交互气泡 -->
-                <div class="space-y-2 flex-1 min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h4 class="text-lg font-extrabold tracking-tight text-foreground">
-                      {{ currentScheme.ocName }}
-                    </h4>
-                    <span class="rounded-md bg-primary/15 text-primary px-2 py-0.5 text-[11px] font-semibold">
-                      {{ currentScheme.ocRole }}
-                    </span>
-                  </div>
-
-                  <!-- 实时状态 -->
-                  <div class="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                    <Zap class="size-3.5 text-amber-500 shrink-0" />
-                    <span class="truncate">{{ currentScheme.ocStatus }}</span>
-                  </div>
-
-                  <!-- 可点击互动气泡 (Clickable Interactive Dialogue) -->
-                  <div
-                    class="relative mt-2 p-3 rounded-xl border border-primary/30 bg-primary/[0.06] text-xs text-foreground cursor-pointer transition-all duration-200 hover:border-primary hover:shadow-md"
-                    :class="isDialoguePopping ? 'scale-95' : 'scale-100'"
-                    @click="triggerOcDialogue"
-                    title="点击切换台词"
-                  >
-                    <div class="flex items-center justify-between text-[10px] text-muted-foreground/80 pb-1">
-                      <span class="flex items-center gap-1 text-primary font-semibold">
-                        <MessageCircle class="size-3" />
-                        互动台词（点击气泡切换）
-                      </span>
-                      <span>{{ currentDialogueIndex + 1 }} / {{ currentScheme.dialoguePool.length }}</span>
-                    </div>
-                    <p class="font-medium leading-relaxed italic">
-                      {{ currentScheme.dialoguePool[currentDialogueIndex] }}
-                    </p>
-                  </div>
-                </div>
+          <!-- 核心对比层：可视化微缩线框图 vs 真实 1:1 组件模拟 -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- [左] 可视化全站架构线框图 (Mini Browser Wireframe Blueprint) -->
+            <div class="lg:col-span-6 space-y-2">
+              <div class="flex items-center justify-between text-xs px-1 font-semibold text-foreground">
+                <span class="flex items-center gap-1.5">
+                  <Monitor class="size-3.5 text-primary" />
+                  整站空间布局线框示意 (Layout Blueprint)
+                </span>
+                <span class="text-[11px] text-primary font-mono font-normal">
+                  {{ currentUiScheme.wireframe.ocLocationText }}
+                </span>
               </div>
 
-              <!-- 右侧：AI 原稿协同 / 文末专属落款印章预览 -->
-              <div class="lg:col-span-5 rounded-2xl border border-border/70 bg-muted/40 p-4 space-y-2.5">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="font-semibold text-foreground flex items-center gap-1.5">
-                    <Bookmark class="size-3.5 text-primary" />
-                    文末专属落款印章预览
+              <!-- 拟真浏览器线框视窗 -->
+              <div class="rounded-2xl border border-border bg-muted/40 p-3.5 space-y-2 shadow-inner">
+                <!-- 浏览器窗体小红黄绿点 -->
+                <div class="flex items-center justify-between border-b border-border/60 pb-2 px-1 text-[11px] text-muted-foreground">
+                  <div class="flex items-center gap-1.5">
+                    <span class="size-2.5 rounded-full bg-red-400" />
+                    <span class="size-2.5 rounded-full bg-yellow-400" />
+                    <span class="size-2.5 rounded-full bg-green-400" />
+                  </div>
+                  <span class="font-mono text-[10px] bg-background/80 rounded px-3 py-0.5 border border-border/50">
+                    https://blog.example.com/layout-preview
                   </span>
-                  <span class="text-[10px] text-muted-foreground">沉浸陪伴感</span>
+                  <span class="text-[10px] font-mono">1440 × 900</span>
                 </div>
-                <div class="p-3 rounded-xl border border-dashed border-primary/40 bg-background/80 text-xs text-muted-foreground leading-relaxed">
-                  {{ currentScheme.quote }}
+
+                <!-- 页面线框栅格动态渲染 -->
+                <div class="h-64 sm:h-72 rounded-xl border border-dashed border-border/80 bg-background/60 p-3 flex flex-col gap-2 overflow-hidden relative">
+                  
+                  <!-- 顶栏 Header -->
+                  <div class="h-7 w-full rounded border border-border bg-muted/60 flex items-center justify-between px-3 text-[10px] shrink-0 text-muted-foreground">
+                    <div class="flex items-center gap-2">
+                      <div class="size-3.5 rounded bg-primary/30" />
+                      <span class="font-bold">LOGO / NAV</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span>文章</span>
+                      <span>分类</span>
+                      <span>关于</span>
+                    </div>
+                  </div>
+
+                  <!-- 顶部全宽 Hero（仅方案 B 激活） -->
+                  <div
+                    v-if="currentUiScheme.wireframe.hasTopHero"
+                    class="h-24 w-full rounded-lg border-2 border-primary bg-primary/10 p-3 flex items-center justify-between shrink-0 relative overflow-hidden"
+                  >
+                    <div class="space-y-1 z-10">
+                      <span class="text-[10px] font-bold text-primary block">CINEMATIC WIDE HERO BANNER</span>
+                      <span class="text-[9px] text-muted-foreground block">标题宣言与引言文字浮动区域</span>
+                    </div>
+                    <!-- 立绘大画幅插槽示意 -->
+                    <div class="h-full w-32 rounded bg-primary/25 border border-primary/50 flex flex-col items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                      <span>[ 大画幅立绘 ]</span>
+                      <span class="text-[8px] font-mono opacity-75">贯穿首屏海报</span>
+                    </div>
+                  </div>
+
+                  <!-- 下部主体内容容器 -->
+                  <div class="flex-1 min-h-0 flex gap-2">
+                    
+                    <!-- 方案 A：左侧 3:7 独立吸顶立绘展台 -->
+                    <div
+                      v-if="currentUiScheme.wireframe.hasLeftSidebar"
+                      class="w-36 rounded-lg border-2 border-primary bg-primary/10 p-2 flex flex-col justify-between shrink-0 text-center"
+                    >
+                      <div class="h-28 rounded border border-primary/50 bg-primary/20 flex flex-col items-center justify-center text-[10px] font-bold text-primary">
+                        <span>[ 竖幅立绘 ]</span>
+                        <span class="text-[8px] opacity-75">320px 独立卡片</span>
+                      </div>
+                      <div class="space-y-1 text-[9px] text-muted-foreground">
+                        <div class="h-2 rounded bg-muted w-3/4 mx-auto" />
+                        <div class="h-2 rounded bg-muted w-1/2 mx-auto" />
+                      </div>
+                    </div>
+
+                    <!-- 主文章流 (通用) -->
+                    <div class="flex-1 rounded-lg border border-border/70 bg-card p-2 flex flex-col gap-2 overflow-hidden">
+                      <div class="flex items-center justify-between text-[9px] text-muted-foreground border-b border-border/40 pb-1">
+                        <span>POSTS STREAM (文章流)</span>
+                        <span>GRID 1FR</span>
+                      </div>
+                      <div class="grid grid-cols-2 gap-1.5 flex-1">
+                        <div class="rounded border border-border/50 bg-muted/30 p-1.5 flex flex-col justify-between">
+                          <div class="h-6 rounded bg-muted/60 w-full" />
+                          <div class="h-1.5 rounded bg-muted w-3/4" />
+                        </div>
+                        <div class="rounded border border-border/50 bg-muted/30 p-1.5 flex flex-col justify-between">
+                          <div class="h-6 rounded bg-muted/60 w-full" />
+                          <div class="h-1.5 rounded bg-muted w-3/4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 方案 D：破框卡片示意 -->
+                    <div
+                      v-if="currentUiScheme.wireframe.hasOverflowCard"
+                      class="w-36 rounded-lg border-2 border-primary bg-primary/10 p-2 flex flex-col justify-between shrink-0 relative"
+                    >
+                      <!-- 破框立绘浮动块 -->
+                      <div class="absolute -top-3 left-4 right-4 h-12 rounded-t-lg bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center shadow-md">
+                        ▲ 破框探出 -mt-6
+                      </div>
+                      <div class="pt-10 text-[9px] text-center font-bold text-primary">
+                        2.5D 破框卡片
+                      </div>
+                      <div class="h-2 rounded bg-muted w-3/4 mx-auto" />
+                    </div>
+
+                  </div>
+
+                  <!-- 方案 C：右下角常驻悬浮挂件示意 -->
+                  <div
+                    v-if="currentUiScheme.wireframe.hasFloatingWidget"
+                    class="absolute bottom-4 right-4 size-10 rounded-full border-2 border-primary bg-primary text-primary-foreground flex flex-col items-center justify-center text-[8px] font-bold shadow-lg animate-bounce"
+                  >
+                    <span>FAB</span>
+                    <span>挂件</span>
+                  </div>
+
                 </div>
-                <p class="text-[11px] text-muted-foreground/80 text-right">
-                  —— 放置在每篇文章文末或 AI 原稿上方
-                </p>
               </div>
             </div>
 
-            <!-- 模块 B：该风格下的文章卡片渲染实景 -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between text-xs border-t pt-5">
-                <span class="font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles class="size-3.5 text-primary" />
-                  当前风格下的文章卡片实景效果
+            <!-- [右] 方案真实高保真组件局部实景 (1:1 High-Fidelity Mockup) -->
+            <div class="lg:col-span-6 space-y-2">
+              <div class="flex items-center justify-between text-xs px-1 font-semibold text-foreground">
+                <span class="flex items-center gap-1.5">
+                  <Component class="size-3.5 text-primary" />
+                  高保真实景预览 (High-Fidelity Mockup)
                 </span>
-                <span class="text-muted-foreground">观察卡片边框质感与角色呼应</span>
+                <span class="text-[11px] text-muted-foreground">观察真实尺寸与留白比例</span>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- 模拟文章卡片 1 -->
-                <div class="group relative rounded-2xl border border-border/80 bg-card p-5 space-y-3 shadow-sm hover:border-primary/60 hover:shadow-lg transition-all duration-300">
-                  <div class="flex items-center justify-between text-xs text-muted-foreground">
-                    <span class="inline-flex items-center gap-1 text-primary font-medium">
-                      <component :is="currentScheme.icon" class="size-3.5" />
-                      {{ currentScheme.themeBadge }}
-                    </span>
-                    <span class="text-[11px]">2026-09-02</span>
+              <!-- 根据选中的方案渲染对应的 1:1 组件模型 -->
+              <div class="rounded-2xl border border-border bg-muted/20 p-4 min-h-[310px] flex flex-col justify-center">
+                
+                <!-- 方案 A 实景：左侧独立立绘名片 + 右侧双文章 -->
+                <div v-if="activeUiIndex === 0" class="grid grid-cols-12 gap-3 items-stretch">
+                  <div class="col-span-5 rounded-xl border border-primary/40 bg-card p-3 flex flex-col justify-between space-y-2 shadow-xs">
+                    <div class="h-32 rounded-lg bg-gradient-to-b from-primary/15 via-primary/5 to-transparent border border-dashed border-primary/40 flex flex-col items-center justify-center text-center p-2">
+                      <ImageIcon class="size-6 text-primary mb-1" />
+                      <span class="text-xs font-bold text-primary">竖版透明立绘插槽</span>
+                      <span class="text-[10px] text-muted-foreground">320 × 480 px (Sticky)</span>
+                    </div>
+                    <div class="space-y-1 text-center">
+                      <h5 class="text-xs font-bold text-foreground">站长 & 伴读 OC</h5>
+                      <p class="text-[10px] text-muted-foreground">常驻视线左侧，随滚动吸顶</p>
+                    </div>
                   </div>
-                  <h4 class="text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
-                    {{ currentScheme.sampleCardTitle }}
-                  </h4>
-                  <p class="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {{ currentScheme.sampleCardExcerpt }}
-                  </p>
-                  <div class="flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
-                    <span class="flex items-center gap-1">
-                      <Clock class="size-3 text-primary/70" />
-                      6 分钟阅读 · 1.8k 字
-                    </span>
-                    <span class="font-medium text-primary flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                      阅读全文 →
-                    </span>
+                  <div class="col-span-7 space-y-2">
+                    <div class="rounded-xl border border-border bg-card p-3 space-y-1.5 shadow-xs">
+                      <span class="text-[10px] text-primary font-semibold">技术实践 · 6 min</span>
+                      <h5 class="text-xs font-bold text-foreground line-clamp-1">Vue 3 静态博客架构解析</h5>
+                      <p class="text-[11px] text-muted-foreground line-clamp-2">正文滚动时，左侧立绘始终优雅在场，不打扰正文阅读，陪伴感最佳。</p>
+                    </div>
+                    <div class="rounded-xl border border-border bg-card p-3 space-y-1.5 shadow-xs">
+                      <span class="text-[10px] text-primary font-semibold">服务器运维 · 8 min</span>
+                      <h5 class="text-xs font-bold text-foreground line-clamp-1">从单体到分布式集群架构</h5>
+                      <p class="text-[11px] text-muted-foreground line-clamp-2">经典二次元博客最成熟的排版范式，适合内容量丰沛的站点。</p>
+                    </div>
                   </div>
                 </div>
 
-                <!-- 方案核心设计要点分析 -->
-                <div class="rounded-2xl border border-border/60 bg-muted/20 p-5 space-y-3 flex flex-col justify-between text-xs">
-                  <div class="space-y-2">
-                    <span class="font-bold text-foreground">💡 方案设计亮点与视觉特征：</span>
-                    <ul class="space-y-1.5 text-muted-foreground leading-relaxed">
-                      <li v-for="feat in currentScheme.features" :key="feat" class="flex items-start gap-1.5">
-                        <span class="text-primary font-bold">·</span>
-                        <span>{{ feat }}</span>
-                      </li>
-                    </ul>
+                <!-- 方案 B 实景：宽屏映画 Hero 海报 -->
+                <div v-else-if="activeUiIndex === 1" class="space-y-3">
+                  <div class="rounded-xl border border-primary/40 bg-gradient-to-r from-primary/10 via-card to-primary/20 p-4 flex items-center justify-between overflow-hidden relative shadow-sm">
+                    <div class="space-y-1.5 max-w-[65%] z-10">
+                      <span class="text-[10px] font-bold text-primary uppercase tracking-wider">Cinematic Hero Banner</span>
+                      <h4 class="text-base font-extrabold text-foreground">欢迎探索我的数字花园与个人世界观</h4>
+                      <p class="text-xs text-muted-foreground line-clamp-2">以二游官网的沉浸映画作为第一眼视觉入口，下滚即达规整技术卡片。</p>
+                    </div>
+                    <div class="h-28 w-28 rounded-lg bg-primary/20 border border-primary/50 flex flex-col items-center justify-center text-center text-primary p-2 shrink-0">
+                      <span class="text-xs font-bold">大幅立绘</span>
+                      <span class="text-[10px] opacity-80">贯穿首屏</span>
+                    </div>
                   </div>
-
-                  <div class="border-t border-border/40 pt-3 space-y-1 text-[11px]">
-                    <p class="text-foreground font-semibold">
-                      🎨 美术素材建议：
-                      <span class="font-normal text-muted-foreground">{{ currentScheme.assetRequirements }}</span>
-                    </p>
-                    <p class="text-foreground font-semibold">
-                      🎯 契合人设类型：
-                      <span class="font-normal text-muted-foreground">{{ currentScheme.recommendedFor }}</span>
-                    </p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="rounded-lg border border-border bg-card p-2.5 text-xs text-muted-foreground">
+                      <span class="font-bold text-foreground block mb-0.5">文章卡片 01</span>
+                      <span class="text-[11px]">保持标准网格排列，不失实用性</span>
+                    </div>
+                    <div class="rounded-lg border border-border bg-card p-2.5 text-xs text-muted-foreground">
+                      <span class="font-bold text-foreground block mb-0.5">文章卡片 02</span>
+                      <span class="text-[11px]">海报视觉冲击与阅读效率两全</span>
+                    </div>
                   </div>
                 </div>
+
+                <!-- 方案 C 实景：纯净单栏 + 右下角悬浮微挂件 -->
+                <div v-else-if="activeUiIndex === 2" class="space-y-3 relative p-2">
+                  <div class="rounded-xl border border-border bg-card p-4 space-y-2 max-w-sm mx-auto shadow-xs">
+                    <div class="flex items-center justify-between text-xs text-muted-foreground">
+                      <span class="font-semibold text-foreground">纯净居中单栏模式 (max-w-4xl)</span>
+                      <span>沉浸长文</span>
+                    </div>
+                    <p class="text-xs text-muted-foreground leading-relaxed">
+                      正文主体采用 100% 干净单栏，绝无多余大图分散视线，极其适合专业技术深度长文阅读。
+                    </p>
+                    <div class="h-1.5 rounded-full bg-muted overflow-hidden flex">
+                      <div class="h-full bg-primary w-2/3" />
+                      <div class="size-2 -mt-0.25 rounded-full bg-primary ring-2 ring-background shrink-0" title="小头像跑酷" />
+                    </div>
+                  </div>
+
+                  <!-- 右下角悬浮 FAB 挂件实景 -->
+                  <div class="flex items-center justify-end pt-2">
+                    <div class="flex items-center gap-2 rounded-full border border-primary/40 bg-card p-1.5 pr-3 shadow-lg">
+                      <div class="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">
+                        OC
+                      </div>
+                      <div class="text-[10px] text-foreground font-medium">
+                        <span>点击展开看板娘名片</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 方案 D 实景：2.5D 破框立体穿插 -->
+                <div v-else-if="activeUiIndex === 3" class="pt-8 px-2 pb-2">
+                  <div class="relative rounded-2xl border border-primary/40 bg-card p-4 pt-6 shadow-md">
+                    <!-- 破框延伸出的立绘上半身示意 -->
+                    <div class="absolute -top-7 left-6 h-14 w-28 rounded-t-xl bg-gradient-to-t from-primary/80 to-primary text-white text-[11px] font-bold flex flex-col items-center justify-center shadow-lg">
+                      <span>▲ 2.5D 破框立绘</span>
+                      <span class="text-[9px] opacity-80">-mt-8 探出上沿</span>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between pl-32">
+                        <span class="text-xs font-bold text-foreground">打破传统单调矩形框</span>
+                        <span class="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded">突破边界</span>
+                      </div>
+                      <p class="text-xs text-muted-foreground leading-relaxed">
+                        利用 CSS 负边距与层叠上下文，角色宛如站在卡片后方探出半身，在视觉上形成强烈的 2.5D 错层与浮空感，灵动且极具设计趣味。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 底部：方案对比参数矩阵 (Pros / Cons / Specs) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-5 text-xs">
+            <!-- 优势 -->
+            <div class="space-y-2 rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3.5">
+              <span class="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <Check class="size-4" />
+                UI 核心优势
+              </span>
+              <ul class="space-y-1 text-muted-foreground leading-relaxed text-[11px]">
+                <li v-for="pro in currentUiScheme.pros" :key="pro" class="flex items-start gap-1">
+                  <span class="text-emerald-500 font-bold">+</span>
+                  <span>{{ pro }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 考量 -->
+            <div class="space-y-2 rounded-xl bg-amber-500/5 border border-amber-500/20 p-3.5">
+              <span class="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <Compass class="size-4" />
+                实现与场景考量
+              </span>
+              <ul class="space-y-1 text-muted-foreground leading-relaxed text-[11px]">
+                <li v-for="con in currentUiScheme.cons" :key="con" class="flex items-start gap-1">
+                  <span class="text-amber-500 font-bold">·</span>
+                  <span>{{ con }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 美术资产与技术规格 -->
+            <div class="space-y-2 rounded-xl bg-muted/40 border border-border/70 p-3.5">
+              <span class="font-bold text-foreground flex items-center gap-1.5">
+                <FileText class="size-4 text-primary" />
+                建议立绘素材规格
+              </span>
+              <div class="space-y-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                <p><strong class="text-foreground">🎨 美术素材：</strong>{{ currentUiScheme.specDetails.assetSpecs }}</p>
+                <p><strong class="text-foreground">📱 移动端表现：</strong>{{ currentUiScheme.specDetails.mobileBehavior }}</p>
               </div>
             </div>
           </div>
