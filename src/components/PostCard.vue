@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Clock, Folder, Bot, MessageSquareText, Image as ImageIcon } from 'lucide-vue-next'
+import { Calendar, Clock, Folder, Bot, MessageSquareText } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, type Post } from '@/data/posts'
 import { t } from '@/i18n'
@@ -47,13 +47,9 @@ function coverBackground(cover: string): string {
           class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-muted/50 via-muted/30 to-muted/60 select-none"
           aria-hidden="true"
         >
-          <span class="absolute font-black tracking-widest uppercase text-foreground/[0.04] dark:text-white/[0.05] pointer-events-none scale-125 select-none text-4xl sm:text-5xl">
+          <span class="absolute font-black tracking-widest uppercase text-foreground/[0.04] dark:text-white/[0.05] pointer-events-none scale-125 select-none text-4xl sm:text-5xl transition-transform duration-500 group-hover:scale-130">
             NO IMAGE
           </span>
-          <div class="z-10 flex flex-col items-center gap-1 text-muted-foreground/75 transition-transform duration-300 group-hover:scale-105">
-            <ImageIcon class="size-6 stroke-[1.5] text-primary/70 transition-colors group-hover:text-primary" />
-            <span class="text-[11px] font-semibold tracking-widest uppercase text-foreground/70">NO IMAGE</span>
-          </div>
         </div>
         <div
           v-else
