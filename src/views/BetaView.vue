@@ -264,12 +264,19 @@ const sampleCategories = [
       <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div class="space-y-2">
-            <div class="flex items-center gap-2.5">
+            <div class="flex flex-wrap items-center gap-2.5">
               <span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 <Sparkles class="size-3.5" />
                 UI/UX 改进对比中心
               </span>
               <span class="text-xs text-muted-foreground">Beta Preview v1.0</span>
+              <RouterLink
+                to="/demo"
+                class="inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-600 dark:text-purple-300 hover:bg-purple-500/20 transition shadow-xs"
+              >
+                <Sparkles class="size-3 text-purple-500" />
+                <span>全新：AI 原稿重构方案展厅 (/demo) →</span>
+              </RouterLink>
             </div>
             <h1 class="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl text-foreground">
               博客交互与视觉体验进化预览

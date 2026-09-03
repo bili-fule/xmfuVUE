@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Calendar, Clock, Folder, Bot, MessageSquareText } from 'lucide-vue-next'
+import { Calendar, Clock, Folder, Sparkles } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, type Post } from '@/data/posts'
 import { t } from '@/i18n'
@@ -73,28 +73,23 @@ function coverBackground(cover: string): string {
 
       <!-- 内容正文区 -->
       <div class="flex min-h-0 flex-1 flex-col justify-between overflow-hidden p-3.5 sm:p-4">
-        <div class="min-h-0 space-y-1.5 overflow-hidden">
-          <!-- AI 原稿标签（固定高度占位，确保有无 AI 原稿卡片高度完全一致） -->
-          <div class="flex h-5 items-center gap-2 text-[11px] font-medium">
-            <template v-if="post.origin === 'ai'">
-              <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                <Bot class="size-3" />
-                {{ t('post.aiOriginal') }}
-              </span>
-              <span v-if="post.prompt || post.conversation.length > 0" class="inline-flex items-center gap-1 text-muted-foreground">
-                <MessageSquareText class="size-3" />
-                {{ t('post.conversation') }}
-              </span>
-            </template>
+        <div class="min-h-0 space-y-1.5">
+          <!-- 标题（样式 B：微标与标题 Flex 并排，防止 line-clamp 裁剪边框） -->
+          <div class="flex items-start gap-1.5 min-w-0">
+            <span
+              v-if="post.origin === 'ai'"
+              class="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary mt-0.5 shadow-2xs select-none"
+            >
+              <Sparkles class="size-2.5" />
+              <span>AI</span>
+            </span>
+            <h2
+              class="min-w-0 flex-1 text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
+              :class="compact ? 'line-clamp-1' : 'line-clamp-2'"
+            >
+              {{ post.title }}
+            </h2>
           </div>
-
-          <!-- 标题 -->
-          <h2
-            class="text-base font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-lg"
-            :class="compact ? 'line-clamp-1' : 'line-clamp-2'"
-          >
-            {{ post.title }}
-          </h2>
 
           <!-- 摘要 -->
           <p class="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">

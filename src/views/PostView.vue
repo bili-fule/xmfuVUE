@@ -7,13 +7,18 @@ import {
   ArrowUp,
   Bot,
   Calendar,
+  Check,
+  ChevronDown,
   Clock,
+  Code2,
+  Copy,
   Download,
   FileDown,
   Folder,
   ListTree,
   MessageSquareText,
   Sparkles,
+  User,
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,6 +46,21 @@ const backLabel = computed(() => t('post.back'))
 const downloadBase = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/downloads`
 const markdownDownloadUrl = computed(() => post.value ? `${downloadBase}/${encodeURIComponent(post.value.slug)}.md` : '')
 const recordDownloadUrl = computed(() => post.value ? `${downloadBase}/${encodeURIComponent(post.value.slug)}-generation-record.md` : '')
+
+// AI 原稿现代折叠检查器状态（方案 2）
+const aiInspectorExpanded = ref(true)
+const aiInspectorTab = ref<'prompt' | 'chat' | 'download'>('prompt')
+const copiedPrompt = ref(false)
+
+function copyPrompt() {
+  if (post.value?.prompt && typeof navigator !== 'undefined' && navigator.clipboard) {
+    navigator.clipboard.writeText(post.value.prompt)
+    copiedPrompt.value = true
+    setTimeout(() => {
+      copiedPrompt.value = false
+    }, 2000)
+  }
+}
 
 // 容器与回到顶部
 const scrollContainerRef = ref<HTMLDivElement | null>(null)
@@ -308,12 +328,12 @@ function coverBackground(cover: string): string {
               <div class="flex flex-wrap items-center gap-2">
                 <span
                   v-if="post.origin === 'ai'"
-                  class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                  class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary border border-primary/20 shadow-2xs"
                 >
-                  <Bot class="size-3" />
+                  <Sparkles class="size-3" />
                   {{ t('post.aiOriginal') }}
                 </span>
-                <span v-if="post.category" class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                <span v-if="post.category" class="inline-flex items-center gap-1 rounded-full bg-muted/80 px-2.5 py-1 text-xs font-medium text-muted-foreground border border-border/60">
                   <Folder class="size-3" />
                   {{ post.category }}
                 </span>
@@ -344,93 +364,165 @@ function coverBackground(cover: string): string {
             </div>
           </header>
 
-          <!-- AI 原稿的生成过程与下载操作 -->
+          <!-- AI 原稿现代折叠检查器（方案 2：Tabs 选项卡 + 气泡回放） -->
           <section
             v-if="post.origin === 'ai'"
-            class="overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.03]"
+            class="overflow-hidden rounded-xl border border-primary/25 bg-card shadow-xs transition-all duration-300"
           >
-            <div class="flex flex-col gap-4 border-b border-primary/10 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
-              <div class="space-y-2">
-                <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-                  <Sparkles class="size-4 text-primary" />
-                  <span>{{ t('post.aiOriginal') }}</span>
-                  <span class="rounded-full border border-border px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
-                    {{ t('post.aiUnreviewed') }}
-                  </span>
+            <!-- 头部折叠控制条 -->
+            <div
+              class="flex cursor-pointer items-center justify-between px-4 py-3 select-none transition hover:bg-muted/40"
+              @click="aiInspectorExpanded = !aiInspectorExpanded"
+            >
+              <div class="flex items-center gap-2.5">
+                <div class="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary shadow-2xs">
+                  <Sparkles class="size-4" />
                 </div>
-                <p class="max-w-2xl text-xs leading-6 text-muted-foreground">
-                  {{ t('post.aiNotice') }}
-                </p>
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-semibold text-foreground">{{ t('post.aiOriginal') }} 档案与脉络</span>
+                    <span v-if="post.model" class="rounded bg-muted px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground">{{ post.model }}</span>
+                    <span v-if="post.conversation && post.conversation.length > 0" class="hidden sm:inline text-[11px] text-muted-foreground">· {{ t('post.conversationCount', { n: post.conversation.length }) }}</span>
+                    <span class="rounded bg-primary/5 px-1.5 py-0.2 text-[10px] text-primary/90 border border-primary/20">{{ t('post.aiUnreviewed') }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="flex flex-col gap-2 lg:shrink-0 lg:items-end">
-                <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                  <Download class="size-3.5 text-primary" />
-                  {{ t('post.downloadGroup') }}
-                </span>
-                <div class="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" as-child>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="post.prompt"
+                  type="button"
+                  class="hidden sm:inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground transition"
+                  @click.stop="copyPrompt"
+                >
+                  <Check v-if="copiedPrompt" class="size-3 text-emerald-500" />
+                  <Copy v-else class="size-3" />
+                  <span>{{ copiedPrompt ? '已复制' : '复制 Prompt' }}</span>
+                </button>
+
+                <div class="flex items-center gap-1 text-xs font-medium text-primary">
+                  <span>{{ aiInspectorExpanded ? '收起' : '展开' }}</span>
+                  <ChevronDown class="size-4 transition-transform duration-200" :class="{ 'rotate-180': aiInspectorExpanded }" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 展开区域：Tab 选项卡系统 -->
+            <div v-if="aiInspectorExpanded" class="border-t border-border/50">
+              <!-- Tab Header -->
+              <div class="flex border-b border-border/40 bg-muted/20 px-4">
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-all"
+                  :class="aiInspectorTab === 'prompt'
+                    ? 'border-primary text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'"
+                  @click="aiInspectorTab = 'prompt'"
+                >
+                  <Code2 class="size-3.5" />
+                  <span>{{ t('post.prompt') }}</span>
+                </button>
+
+                <button
+                  v-if="post.conversation && post.conversation.length > 0"
+                  type="button"
+                  class="flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-all"
+                  :class="aiInspectorTab === 'chat'
+                    ? 'border-primary text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'"
+                  @click="aiInspectorTab = 'chat'"
+                >
+                  <MessageSquareText class="size-3.5" />
+                  <span>{{ t('post.conversation') }}</span>
+                  <span class="rounded-full bg-muted px-1.5 py-0.2 text-[10px]">{{ post.conversation.length }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-all"
+                  :class="aiInspectorTab === 'download'
+                    ? 'border-primary text-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'"
+                  @click="aiInspectorTab = 'download'"
+                >
+                  <Download class="size-3.5" />
+                  <span>{{ t('post.downloadGroup') }}</span>
+                </button>
+              </div>
+
+              <!-- Tab 1: Prompt 提示词 -->
+              <div v-if="aiInspectorTab === 'prompt'" class="p-4 sm:p-5 space-y-3">
+                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                  <span v-if="post.prompt">共 {{ post.prompt.length }} 字 · 原始生成需求</span>
+                  <span v-else>{{ t('post.noPrompt') }}</span>
+                  <Button v-if="post.prompt" size="sm" variant="outline" class="h-7 text-xs" @click="copyPrompt">
+                    <Check v-if="copiedPrompt" class="size-3 mr-1 text-emerald-500" />
+                    <Copy v-else class="size-3 mr-1" />
+                    <span>{{ copiedPrompt ? '已复制到剪贴板' : '一键复制提示词' }}</span>
+                  </Button>
+                </div>
+
+                <div class="rounded-xl border border-border/60 bg-muted/40 p-3.5 font-mono text-xs leading-relaxed text-foreground select-all whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+                  {{ post.prompt || t('post.noPrompt') }}
+                </div>
+              </div>
+
+              <!-- Tab 2: 对话回溯（现代聊天气泡） -->
+              <div v-if="aiInspectorTab === 'chat' && post.conversation && post.conversation.length > 0" class="p-4 sm:p-5 space-y-4 max-h-80 overflow-y-auto">
+                <div
+                  v-for="(turn, idx) in post.conversation"
+                  :key="`${turn.role}-${idx}`"
+                  class="flex gap-2.5"
+                  :class="turn.role === 'user' ? 'flex-row-reverse' : 'flex-row'"
+                >
+                  <!-- 头像 -->
+                  <div
+                    class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs shadow-2xs"
+                    :class="turn.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground ring-1 ring-border'"
+                  >
+                    <User v-if="turn.role === 'user'" class="size-3.5" />
+                    <Bot v-else class="size-3.5" />
+                  </div>
+
+                  <!-- 气泡 -->
+                  <div
+                    class="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-2xs"
+                    :class="turn.role === 'user'
+                      ? 'rounded-tr-xs bg-primary text-primary-foreground'
+                      : 'rounded-tl-xs bg-muted/70 text-foreground border border-border/60'"
+                  >
+                    <div class="flex items-center justify-between gap-4 mb-1 opacity-70 text-[10px]">
+                      <span>{{ turn.role === 'user' ? '提问者' : (post.model || 'AI') }}</span>
+                    </div>
+                    <p class="whitespace-pre-wrap break-words leading-relaxed">{{ turn.content }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: 资产下载 -->
+              <div v-if="aiInspectorTab === 'download'" class="p-5 flex flex-wrap items-center justify-between gap-4 bg-muted/10">
+                <div>
+                  <div class="text-xs font-semibold text-foreground">{{ t('post.downloadGroup') }}</div>
+                  <div class="text-[11px] text-muted-foreground mt-0.5">
+                    {{ t('post.aiNotice') }}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Button variant="outline" size="sm" class="h-8 text-xs" as-child>
                     <a :href="markdownDownloadUrl" :download="`${post.slug}.md`">
-                      <Download class="size-3.5" />
+                      <Download class="size-3 mr-1.5" />
                       {{ t('post.downloadMarkdown') }}
                     </a>
                   </Button>
-                  <Button variant="outline" size="sm" as-child>
+                  <Button variant="outline" size="sm" class="h-8 text-xs" as-child>
                     <a :href="recordDownloadUrl" :download="`${post.slug}-generation-record.md`">
-                      <FileDown class="size-3.5" />
+                      <FileDown class="size-3 mr-1.5" />
                       {{ t('post.downloadRecord') }}
                     </a>
                   </Button>
                 </div>
               </div>
             </div>
-
-            <div class="grid min-w-0 md:grid-cols-2">
-              <div class="min-w-0 border-b border-primary/10 p-4 sm:p-5 md:border-b-0 md:border-r">
-                <div class="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <Sparkles class="size-3.5 text-primary" />
-                  {{ t('post.prompt') }}
-                </div>
-                <pre class="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/60 p-3 text-xs leading-6 text-foreground">{{ post.prompt || t('post.noPrompt') }}</pre>
-              </div>
-
-              <div class="min-w-0 p-4 sm:p-5">
-                <div class="mb-3 flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <MessageSquareText class="size-3.5 text-primary" />
-                  {{ t('post.conversationSummary') }}
-                </div>
-                <p class="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
-                  {{ post.conversationSummary || t('post.noConversation') }}
-                </p>
-                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
-                  <span v-if="post.model">{{ t('post.generatedBy') }}：{{ post.model }}</span>
-                  <span>{{ t('post.conversationCount', { n: post.conversation.length }) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <details v-if="post.conversation.length > 0" class="border-t border-primary/10">
-              <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs font-medium text-foreground hover:bg-muted/40 sm:px-5">
-                <MessageSquareText class="size-3.5 text-primary" />
-                {{ t('post.conversation') }}
-                <span class="text-muted-foreground">({{ post.conversation.length }})</span>
-              </summary>
-              <div class="space-y-4 border-t border-primary/10 px-4 py-4 sm:px-5">
-                <div
-                  v-for="(turn, index) in post.conversation"
-                  :key="`${turn.role}-${index}`"
-                  class="border-l-2 pl-3 sm:pl-4"
-                  :class="turn.role === 'user' ? 'border-foreground/30' : 'border-primary/50'"
-                >
-                  <div class="mb-1 text-[11px] font-semibold text-muted-foreground">
-                    {{ turn.role === 'user' ? '我' : 'AI' }}
-                  </div>
-                  <p class="whitespace-pre-wrap text-sm leading-7 text-foreground/85">
-                    {{ turn.content }}
-                  </p>
-                </div>
-              </div>
-            </details>
           </section>
 
           <!-- 窄屏内嵌目录 (TOC) -->

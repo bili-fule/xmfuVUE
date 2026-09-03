@@ -32,6 +32,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/BetaView.vue'),
   },
   {
+    path: '/demo',
+    name: 'demo',
+    component: () => import('@/views/DemoView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },
