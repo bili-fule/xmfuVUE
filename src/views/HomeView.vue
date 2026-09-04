@@ -13,12 +13,28 @@ import {
   X,
   ChevronDown,
   Check,
+  LayoutGrid,
+  AlignLeft,
+  List,
 } from 'lucide-vue-next'
-import PostCard from '@/components/PostCard.vue'
+import PostCard, { type PostLayoutMode } from '@/components/PostCard.vue'
 import SiteFooter from '@/components/SiteFooter.vue'
 import { getHomePosts, type Post } from '@/data/posts'
 import { siteConfig } from '@/data/site'
 import { t } from '@/i18n'
+
+const POST_VIEW_MODE_KEY = 'fulieblog:post-view-mode'
+const postViewMode = ref<PostLayoutMode>('ghost')
+
+function setPostViewMode(mode: PostLayoutMode) {
+  postViewMode.value = mode
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(POST_VIEW_MODE_KEY, mode)
+    } catch {}
+  }
+  resetPage()
+}
 
 const allPosts = getHomePosts()
 const trackRef = ref<HTMLElement | null>(null)
@@ -204,6 +220,7 @@ const layout = computed<LayoutConfig>(() => {
 })
 
 const isVerticalHome = computed(() => layout.value.cols === 1)
+const isVerticalStream = computed(() => isVerticalHome.value || postViewMode.value === 'editorial' || postViewMode.value === 'index')
 
 // 等宽 Grid 类
 const gridColsClass = computed(() => {
@@ -239,7 +256,7 @@ function storePage(page: number) {
   try {
     window.sessionStorage.setItem(HOME_PAGE_STORAGE_KEY, String(page))
   } catch {
-    // Ignore storage restrictions
+    // 忽略 sessionStorage 写入异常
   }
 }
 
@@ -250,7 +267,7 @@ function scrollToIndex(index: number, behavior: ScrollBehavior = 'smooth') {
   const target = Math.max(0, Math.min(index, pages.value.length - 1))
   currentPage.value = target
 
-  if (!isVerticalHome.value) {
+  if (!isVerticalStream.value) {
     const position = track.clientWidth * target
     if (behavior === 'auto') {
       const previousScrollBehavior = track.style.scrollBehavior
@@ -274,7 +291,7 @@ function restoreStoredPage() {
 
   pageRestored = true
   lastActivePerPage = layout.value.perPage
-  if (!isVerticalHome.value) {
+  if (!isVerticalStream.value) {
     scrollToIndex(readStoredPage(), 'auto')
   }
 }
@@ -297,8 +314,9 @@ function handleDirectJump() {
 function resetPage() {
   currentPage.value = 0
   if (trackRef.value) {
-    if (isVerticalHome.value) {
+    if (isVerticalStream.value) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
+      trackRef.value.scrollTop = 0
     } else {
       trackRef.value.scrollLeft = 0
     }
@@ -314,7 +332,7 @@ let lastWheelTime = 0
 const WHEEL_COOLDOWN = 600
 
 function onWheel(e: WheelEvent) {
-  if (isVerticalHome.value) return
+  if (isVerticalStream.value) return
 
   const track = trackRef.value
   if (!track) return
@@ -334,7 +352,7 @@ function onWheel(e: WheelEvent) {
 // 桌面端同步当前页码
 let scrollRaf: number | null = null
 function onScroll() {
-  if (!viewActive.value || isVerticalHome.value) return
+  if (!viewActive.value || isVerticalStream.value) return
   if (scrollRaf) return
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = null
@@ -349,7 +367,7 @@ function onScroll() {
 
 // 视口大小变化处理
 watch(
-  [() => layout.value.perPage, () => isVerticalHome.value, trackWidth],
+  [() => layout.value.perPage, () => isVerticalStream.value, trackWidth],
   async ([perPage, , nextWidth]) => {
     if (!mounted.value || !viewActive.value || !pageRestored || !trackRef.value || !nextWidth) return
 
@@ -360,7 +378,7 @@ watch(
     await nextTick()
     if (!viewActive.value || !trackRef.value) return
     lastActivePerPage = perPage
-    if (!isVerticalHome.value) {
+    if (!isVerticalStream.value) {
       scrollToIndex(targetPage, 'auto')
     }
   },
@@ -383,6 +401,14 @@ watch(currentPage, (page) => {
 onMounted(() => {
   mounted.value = true
   viewActive.value = true
+  if (typeof window !== 'undefined') {
+    try {
+      const savedMode = window.localStorage.getItem(POST_VIEW_MODE_KEY) as PostLayoutMode
+      if (savedMode && ['ghost', 'editorial', 'index'].includes(savedMode)) {
+        postViewMode.value = savedMode
+      }
+    } catch {}
+  }
   trackRef.value?.addEventListener('wheel', onWheel, { passive: false })
 
   nextTick(() => {
@@ -399,20 +425,61 @@ onUnmounted(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col">
-    <!-- 桌面端标题 -->
+    <!-- 桌面端标题与模式切换 -->
     <div
       v-if="!isVerticalHome"
       class="mx-auto w-full max-w-7xl shrink-0 px-4 pt-4 pb-2 md:px-8 md:pt-5 md:pb-3"
     >
-      <h1 class="text-2xl font-bold tracking-tight md:text-3xl">
-        {{ siteConfig.site.title }}
-      </h1>
-      <p class="text-sm text-muted-foreground md:text-base">
-        {{ siteConfig.site.description }}
-      </p>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight md:text-3xl">
+            {{ siteConfig.site.title }}
+          </h1>
+          <p class="text-sm text-muted-foreground md:text-base">
+            {{ siteConfig.site.description }}
+          </p>
+        </div>
+
+        <!-- 方案切换胶囊（供对比去卡片/弱化效果） -->
+        <div class="inline-flex items-center gap-1 rounded-xl bg-muted/60 p-1 text-xs border border-border/40 backdrop-blur-xs select-none">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-all cursor-pointer"
+            :class="postViewMode === 'ghost'
+              ? 'bg-background text-foreground shadow-xs font-semibold'
+              : 'text-muted-foreground hover:text-foreground'"
+            @click="setPostViewMode('ghost')"
+          >
+            <LayoutGrid class="size-3.5" />
+            <span>弱化卡片</span>
+          </button>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-all cursor-pointer"
+            :class="postViewMode === 'editorial'
+              ? 'bg-background text-foreground shadow-xs font-semibold'
+              : 'text-muted-foreground hover:text-foreground'"
+            @click="setPostViewMode('editorial')"
+          >
+            <AlignLeft class="size-3.5" />
+            <span>杂志图文</span>
+          </button>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition-all cursor-pointer"
+            :class="postViewMode === 'index'
+              ? 'bg-background text-foreground shadow-xs font-semibold'
+              : 'text-muted-foreground hover:text-foreground'"
+            @click="setPostViewMode('index')"
+          >
+            <List class="size-3.5" />
+            <span>极简索引</span>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- 移动端：轻量紧凑的筛选胶囊栏 + 自定义分类/类型浮层 + 归档直达抽屉按钮 -->
+    <!-- 移动端：轻量紧凑的筛选胶囊栏 + 自定义分类/类型浮层 + 归档直达抽屉按钮 + 模式切换 -->
     <div
       v-if="isVerticalHome"
       class="sticky top-14 z-30 shrink-0 border-b bg-background/95 px-3 py-2.5 backdrop-blur-md"
@@ -516,6 +583,37 @@ onUnmounted(() => {
 
         <div class="flex-1" />
 
+        <!-- 移动端紧凑模式切换器 -->
+        <div class="inline-flex items-center rounded-lg bg-muted/70 p-0.5 text-[11px] border border-border/40 select-none">
+          <button
+            type="button"
+            class="p-1 rounded-md transition-all"
+            :class="postViewMode === 'ghost' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'"
+            title="弱化卡片"
+            @click="setPostViewMode('ghost')"
+          >
+            <LayoutGrid class="size-3.5" />
+          </button>
+          <button
+            type="button"
+            class="p-1 rounded-md transition-all"
+            :class="postViewMode === 'editorial' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'"
+            title="杂志图文"
+            @click="setPostViewMode('editorial')"
+          >
+            <AlignLeft class="size-3.5" />
+          </button>
+          <button
+            type="button"
+            class="p-1 rounded-md transition-all"
+            :class="postViewMode === 'index' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'"
+            title="极简索引"
+            @click="setPostViewMode('index')"
+          >
+            <List class="size-3.5" />
+          </button>
+        </div>
+
         <!-- 归档直达按钮（点击唤起年月抽屉） -->
         <button
           type="button"
@@ -528,19 +626,19 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 滚动容器：移动端为原生纵向流畅滚动（利用 window/body 滚动），桌面端为横向分页滚动 -->
+    <!-- 滚动容器：纵向流（移动端或杂志/索引模式） vs 横向分页滚动（桌面端弱化卡片网格） -->
     <div
       ref="trackRef"
       class="home-track min-h-0 flex flex-1 scrollbar-hide"
-      :class="isVerticalHome
+      :class="isVerticalStream
         ? 'flex-col sm:overflow-y-auto'
         : 'overflow-x-auto overflow-y-auto snap-x snap-mandatory scroll-smooth'"
       @scroll="onScroll"
     >
-      <!-- 移动端文章列表流（支持精准定位滚动） -->
+      <!-- 模式 2：杂志图文流 (Editorial Stream) -->
       <div
-        v-if="isVerticalHome"
-        class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 py-3"
+        v-if="postViewMode === 'editorial'"
+        class="mx-auto flex w-full max-w-4xl flex-col px-4 py-2 sm:py-4"
       >
         <div v-if="filteredPosts.length === 0" class="py-16 text-center text-sm text-muted-foreground">
           {{ t('search.noResults') }}
@@ -552,11 +650,49 @@ onUnmounted(() => {
           :to="`/post/${post.slug}`"
           class="block w-full scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
         >
-          <PostCard :post="post" />
+          <PostCard :post="post" layout-mode="editorial" />
         </RouterLink>
       </div>
 
-      <!-- 桌面端分页网格 -->
+      <!-- 模式 3：极简高密度字符索引 (Minimalist Index) -->
+      <div
+        v-else-if="postViewMode === 'index'"
+        class="mx-auto flex w-full max-w-4xl flex-col px-4 py-3 sm:py-4 space-y-1"
+      >
+        <div v-if="filteredPosts.length === 0" class="py-16 text-center text-sm text-muted-foreground">
+          {{ t('search.noResults') }}
+        </div>
+        <RouterLink
+          v-for="post in filteredPosts"
+          :id="`post-${post.slug}`"
+          :key="post.slug"
+          :to="`/post/${post.slug}`"
+          class="block w-full scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
+        >
+          <PostCard :post="post" layout-mode="index" />
+        </RouterLink>
+      </div>
+
+      <!-- 模式 1 移动端：弱化幽灵卡片纵向流 -->
+      <div
+        v-else-if="isVerticalHome"
+        class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-3 py-3"
+      >
+        <div v-if="filteredPosts.length === 0" class="py-16 text-center text-sm text-muted-foreground">
+          {{ t('search.noResults') }}
+        </div>
+        <RouterLink
+          v-for="post in filteredPosts"
+          :id="`post-${post.slug}`"
+          :key="post.slug"
+          :to="`/post/${post.slug}`"
+          class="block w-full scroll-mt-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
+        >
+          <PostCard :post="post" layout-mode="ghost" />
+        </RouterLink>
+      </div>
+
+      <!-- 模式 1 桌面端：弱化幽灵卡片分页网格 -->
       <template v-else>
         <section
           v-for="(page, pageIndex) in pages"
@@ -576,20 +712,20 @@ onUnmounted(() => {
                 :to="`/post/${post.slug}`"
                 class="group flex h-full min-h-0 col-span-1 min-w-0 max-w-full"
               >
-                <PostCard :post="post" compact class="h-full w-full" />
+                <PostCard :post="post" compact layout-mode="ghost" class="h-full w-full" />
               </RouterLink>
             </div>
           </div>
         </section>
       </template>
 
-      <!-- 移动端页脚跟随在列表末尾 -->
-      <SiteFooter v-if="isVerticalHome" />
+      <!-- 垂直流时页脚跟随在列表末尾 -->
+      <SiteFooter v-if="isVerticalStream" />
     </div>
 
-    <!-- 桌面端底部分页条 -->
+    <!-- 桌面端底部分页条（仅在横向分页网格模式下展现） -->
     <nav
-      v-if="pages.length > 1 && !isVerticalHome"
+      v-if="pages.length > 1 && !isVerticalStream"
       class="shrink-0 flex items-center justify-center gap-1.5 sm:gap-2.5 py-2.5 sm:py-3 px-4 select-none"
       aria-label="分页导航"
     >
