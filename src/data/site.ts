@@ -27,6 +27,10 @@ export interface SiteConfig {
     name: string
     url: string
   }
+  icp?: {
+    number: string
+    url?: string
+  }
 }
 
 export const siteConfig: SiteConfig = {
@@ -72,5 +76,9 @@ export const siteConfig: SiteConfig = {
   license: {
     name: 'CC BY-NC-SA 4.0',
     url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+  },
+  icp: {
+    number: '粤ICP备2026131805号',
+    url: 'https://beian.miit.gov.cn/',
   },
 }
