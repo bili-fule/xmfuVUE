@@ -796,7 +796,7 @@ onUnmounted(() => {
       </form>
     </nav>
 
-    <SiteFooter v-if="!isVerticalHome" />
+    <SiteFooter v-if="!isVerticalStream" />
 
     <!-- 移动端：直达年月时间轴抽屉 (Bottom Sheet) -->
     <Teleport to="body">
