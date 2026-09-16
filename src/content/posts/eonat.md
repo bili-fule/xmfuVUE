@@ -1,21 +1,23 @@
-﻿---
+---
 title: stun建站端口不固定？教你用eo自动回源到你的stun端口
 published: 2025-08-15
-description: ''
+description: '解决 STUN 建站公网端口不固定的痛点方案：教你如何结合腾讯云 EdgeOne 边缘规则与 GitHub Actions 自动化脚本，实现家宽服务的动态端口自动回源。'
 image: ''
 tags: [github,edgeone]
 category: '教程'
 ---
 
 啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊我没有ipv6
-# 前言什么的
+
+## 前言与背景
+
 我想要用家宽建一个Matrix
 
 我也没有ipv6，没有现成的方案实现eo回源
 
 但是直接stun直连太麻烦了也不安全（我也成功了），于是考虑做个eo自动回源
 
-## stun直连matrix的思路
+### stun直连matrix的思路
 
 因为matrix有点小众，我也没找到教程，以下是我摸索出来的，也分享下吧
 
@@ -31,7 +33,7 @@ stun直连的话我讲下思路吧，在github建个仓库，里面放.well-know
 
 然后把这个仓库通过什么page什么的部署到上一级域名（比如）你的matrix部署在m.matrix.org，你的client文件必须放在m.matrix.org下或者matrix.org下，然后客户端写client文件所在的域名就可以连接了
 
-# eo自动回源
+## eo自动回源
 
 其实也差不多，我们腾讯云有api可以调用，但是非常的答辩（发个请求需要复杂的密钥生成，因此使用action来发请求）
 

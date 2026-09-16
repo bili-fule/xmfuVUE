@@ -2,7 +2,7 @@ import { ViteSSG } from 'vite-ssg'
 import App from './App.vue'
 import { routes } from './router'
 import { getAllPublishedPosts, getPostBySlug } from '@/data/posts'
-import { applyPostMeta } from '@/lib/seo'
+import { applyRouteMeta } from '@/lib/seo'
 import './style.css'
 import 'highlight.js/styles/github-dark.css'
 
@@ -26,17 +26,21 @@ export const createApp = ViteSSG(
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
       }
       if (!head) return
-      const post = to.name === 'post' && typeof to.params.slug === 'string'
-        ? getPostBySlug(to.params.slug)
-        : null
-      applyPostMeta(head, post
-        ? {
-            title: post.title,
-            excerpt: post.excerpt,
-            slug: post.slug,
-            noindex: post.origin === 'ai',
-          }
-        : null)
+      const slug = typeof to.params.slug === 'string' ? to.params.slug : ''
+      const post = to.name === 'post' && slug ? getPostBySlug(slug) : null
+
+      applyRouteMeta(head, {
+        path: to.path,
+        name: typeof to.name === 'string' ? to.name : undefined,
+        post: post
+          ? {
+              title: post.title,
+              excerpt: post.excerpt,
+              slug: post.slug,
+              noindex: post.origin === 'ai',
+            }
+          : null,
+      })
     })
   },
 )

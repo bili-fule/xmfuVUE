@@ -1,7 +1,7 @@
 ---
 title: AI 原稿分区：把生成过程也留下
 published: 2026-08-30
-description: 记录一次关于 AI 原稿分区、提示词留存和对话记录展示的博客设计讨论。
+description: 详细记录一次关于博客 AI 原稿独立分区、生成提示词留存与对话脉络回放的架构设计讨论，探索人机协作与生成过程的完整存档。
 image: ''
 tags: [AI, 博客设计, Markdown, 生成记录]
 category: AI

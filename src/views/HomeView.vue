@@ -484,6 +484,10 @@ onUnmounted(() => {
       v-if="isVerticalHome"
       class="sticky top-14 z-30 shrink-0 border-b bg-background/95 px-3 py-2.5 backdrop-blur-md"
     >
+      <!-- 移动端语义化主标题，确保移动端爬虫与无障碍阅读器均能识别唯一 h1 -->
+      <h1 class="sr-only">
+        {{ siteConfig.site.title }} - {{ siteConfig.site.description }}
+      </h1>
       <div class="flex items-center gap-2">
         <!-- 自定义分类下拉选择菜单（包含 全部、AI原稿 以及 真实分类） -->
         <div ref="categoryDropdownRef" class="relative shrink-0">

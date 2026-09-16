@@ -1,7 +1,7 @@
 ---
 title: 白纸
 published: 2026-02-09
-description: '或许是哪个角落的纸'
+description: '随笔杂谈短文《白纸》：记录关于时间流逝、记忆归零与人际温情的微型小说故事，写给沉睡与苏醒的人。'
 image: ''
 tags: []
 category: '杂项'

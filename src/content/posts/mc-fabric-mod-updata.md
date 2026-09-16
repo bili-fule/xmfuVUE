@@ -1,4 +1,4 @@
-﻿---
+---
 title: 尝试更新一个我的世界fabricmod的经历
 published: 2025-07-16
 description: '本文记录了一次尝试将一个 Minecraft Fabric Mod 从 1.19.3 版本更新到 1.21 版本的经历。文章详细描述了更新过程中的环境配置、依赖更新、代码修复等步骤，并分享了借助 AI 工具解决编译错误的方法，最终也记录了更新后遇到的建模和行为问题。'
@@ -8,12 +8,12 @@ category: '教程'
 draft: false 
 lang: ''
 ---
-# 前言
+## 前言
 想开一个我的世界浮岛生存服务器
 ::github{repo="Youmiel/FloatingIslands-Datapack"}
 其中一个想要搭配的mod只更新到了1.19.3，我想要在1.21上使用，因此尝试更新
 ::github{repo="innnky/majobroom"}
-# 过程
+## 升级与修复过程
 先将这个仓库Fork 和 Clone
 拖入IntelliJ IDEA
 打开[fabric](https://fabricmc.net/develop/)查看想要的版本推荐的Fabric Loader、Yarn 和 Fabric API 

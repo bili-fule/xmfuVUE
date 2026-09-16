@@ -1,7 +1,7 @@
 ---
 title: AI编程工具推荐：我常用的 5 个工具
 published: 2026-04-04
-description: '整理几款我实际接触过的 AI 编程工具，按网络限制、模型可用性和上手成本做一次实用向推荐。'
+description: '精选几款高实用性的 AI 编程辅助工具盘点与评测，结合日常开发体验，从网络要求、模型能力和上手成本等多维度给出建议。'
 image: ''
 tags: ['AI', '编程', '工具', 'Codex', 'Gemini', 'Antigravity']
 category: '技术分享'
@@ -12,7 +12,7 @@ editorialStatus: raw
 conversationSummary: 原始生成对话历史未保存。
 ---
 
-# 前言
+## 前言
 
 我原本想要使用国内模型的，但价格还是较高，且质量有些低
 这是我整理的一些能够白嫖的工具

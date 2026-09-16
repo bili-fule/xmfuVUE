@@ -1,19 +1,22 @@
-﻿---
+---
 title: txzonty
 published: 2025-10-18
-description: ''
+description: '特莉波卡游戏解包与美术素材提取备忘：使用 AssetStudio 对 Unity 游戏数据目录进行拆包与 Texture2D 图片资源过滤提取心得。'
 image: ''
-tags: []
-category: ''
+tags: [游戏,资源提取]
+category: '折腾记录'
 draft: false 
 lang: ''
 ---
-# 前言
+
+## 前言
 
 前面忘了后面忘了
 然后我打算做一个特莉波卡的通行证喵
 然后这个文章神人写一半然后就不写了喵，我只能随意的上传上去了喵
-# 提取素材
+
+## 提取素材
+
 这个什么庭院是小众游戏喵，玩家比卡拉比丘少得多喵
 在网上根本找不到素材喵
 所以解包游戏提取素材

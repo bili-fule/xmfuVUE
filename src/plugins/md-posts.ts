@@ -68,6 +68,38 @@ md.use(anchor, {
   slugify: slugifyHeading,
 })
 
+// 保证 Markdown 内部标题绝不会产生 h1（页面唯一 h1 属于 PostView 文章标题）
+md.core.ruler.push('no_h1_headings', (state) => {
+  for (const token of state.tokens) {
+    if (token.type === 'heading_open' || token.type === 'heading_close') {
+      if (token.tag === 'h1') {
+        token.tag = 'h2'
+      }
+    }
+  }
+})
+
+// 图片渲染兜底：缺失或空 alt 时回退为文章标题插图，满足无障碍与 SEO
+const defaultImageRenderer = md.renderer.rules.image || function (tokens, idx, options, _env, self) {
+  return self.renderToken(tokens, idx, options)
+}
+
+md.renderer.rules.image = function (tokens, idx, options, env, self) {
+  const token = tokens[idx]
+  const altIdx = token.attrIndex('alt')
+  const defaultAlt = env && typeof env.postTitle === 'string' && env.postTitle
+    ? `${env.postTitle} 插图`
+    : '文章插图'
+
+  if (altIdx < 0) {
+    token.attrPush(['alt', defaultAlt])
+  } else if (!token.attrs?.[altIdx]?.[1] || !String(token.attrs[altIdx][1]).trim()) {
+    token.attrs![altIdx][1] = defaultAlt
+  }
+
+  return defaultImageRenderer(tokens, idx, options, env, self)
+}
+
 /** HTML 去标签得到纯文本（用于搜索索引） */
 function htmlToText(html: string): string {
   return html
@@ -158,7 +190,10 @@ function parsePost(filePath: string): Post {
   const category = fm.category || ''
   const draft = Boolean(fm.draft)
   const date = toDateString(fm.published)
-  const contentHtml = md.render(content)
+  const renderedHtml = md.render(content, { postTitle: title })
+  const contentHtml = renderedHtml
+    .replace(/<img\b(?![^>]*\balt=)([^>]*?)>/gi, `<img alt="${title} 插图"$1>`)
+    .replace(/<img\b([^>]*?)\balt=["']\s*["']([^>]*?)>/gi, `<img alt="${title} 插图"$1$2>`)
   const origin = normalizeOrigin(fm.origin)
   return {
     slug,
@@ -344,6 +379,12 @@ ${items}
 
 function buildSitemap(posts: Post[]): string {
   const base = SITE.baseUrl.replace(/\/$/, '')
+  const staticUrls = [
+    `  <url>\n    <loc>${base}</loc>\n  </url>`,
+    `  <url>\n    <loc>${base}/about</loc>\n  </url>`,
+    `  <url>\n    <loc>${base}/friends</loc>\n  </url>`,
+  ].join('\n')
+
   const urls = posts
     .filter((p) => p.origin !== 'ai')
     .map(
@@ -355,9 +396,7 @@ function buildSitemap(posts: Post[]): string {
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${base}</loc>
-  </url>
+${staticUrls}
 ${urls}
 </urlset>
 `

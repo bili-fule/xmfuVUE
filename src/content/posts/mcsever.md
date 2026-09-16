@@ -1,15 +1,13 @@
-﻿---
+---
 title: 随便写的文章用于教程如何进入服务器
 published: 2025-09-23
-description: '随便写的文章用于教程如何进入服务器'
+description: 'Minecraft 联机游戏服务器进入教程：详细介绍正版与 LittleSkin 皮肤站鉴权登录方式、电脑端 PCL2 启动器设置以及手机端 FCL 启动器的完整连接步骤。'
 image: ''
 tags: [mc]
 category: ''
 draft: false 
 lang: ''
 ---
-
-# 随便写的文章用于教程如何进入服务器
 
 登录方式：有正版账号的可以直接进入，无需注册littleskin；没有正版的需要注册littleskin账号。
 
@@ -63,19 +61,19 @@ lang: ''
 
 服务器地址填写 xmfu.cn
 
-![](https://r2.xmfu.cn/2025/09/ec040ab0a34c836169c5b77b56cdf77c.png)
+![Minecraft 联机添加多人服务器界面](https://r2.xmfu.cn/2025/09/ec040ab0a34c836169c5b77b56cdf77c.png)
 
 即可加入
 
 ![image-20250923165210957](https://r2.xmfu.cn/2025/09/8b1e8d7898e7c737ca39df397e37795d.png)
 
-# 手机教程
+## 手机端进入教程
 
-## 下载FCL启动器
+### 下载FCL启动器
 
 下载FCL启动器 [官方](https://fcl-team.github.io/) 或 [非官方下载站](https://foldcraftlauncher.cn/)
 
-## 安装与设置
+### 安装与设置
 
 1. 安装完成后打开FCL，允许文件访问权限
 2. 首次启动会提示安装Java运行环境，点击安装即可
@@ -83,13 +81,13 @@ lang: ''
    - **正版用户**：选择「微软登录」，登录你的微软账号
    - **littleskin用户**：选择「第三方登录」→「添加认证服务器」，地址填写：`https://littleskin.cn/api/yggdrasil`，然后登录
 
-## 下载游戏
+### 下载游戏
 
 1. 点击左侧下载按钮，进入版本下载页面
 2. 搜索并下载版本 **26.1.2**
 3. 下载完成后，回到首页选择刚下载的版本
 
-## 添加服务器
+### 添加服务器
 
 1. 启动游戏后选择「多人游戏」
 2. 点击「添加服务器」

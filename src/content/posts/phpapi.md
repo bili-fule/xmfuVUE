@@ -1,4 +1,4 @@
-﻿---
+---
 title: 使用cloudflare worker+r2做一个古明地恋的随机图api
 published: 2025-07-22
 description: '本教程详细介绍了如何利用 Cloudflare Workers 和 R2 存储构建一个古明地恋主题的随机图片 API。文章分为两部分，首先介绍了最新的实现方案，包括使用 Python 脚本从 Pixiv 下载、处理和上传图片到 R2 存储桶，以及如何配置 Cloudflare Worker 来提供 API 服务。此外，文章还保留了使用 PHP 虚拟主机的旧方案以供参考。'
@@ -8,7 +8,7 @@ category: '教程'
 draft: false 
 lang: ''
 ---
-# 更新 迁移到cloudflare worker+r2
+## 更新：迁移到 Cloudflare Worker + R2
 ## 准备
 - [x] cloudflare r2
 
@@ -70,14 +70,14 @@ fork我的这个项目
 
 然后创建worker选择这个项目，构建，在项目中wrangler.toml修改存储桶名字
 
-# （旧的）使用php虚拟主机做一个古明地恋的随机图api
-## 准备
+## （旧方案）使用 PHP 虚拟主机实现方案
+### 准备工作
 - [x] python
 - [x] php虚拟主机
 - [x] Pixiv高级会员
 - [x] 一个聪明的大脑
 
-## 过程
+### 实施步骤
 
 下载我做好的诡异项目
 

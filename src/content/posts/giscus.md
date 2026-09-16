@@ -1,4 +1,4 @@
-﻿---
+---
 title: 让你的fuwari有一个自适应的giscus评论区
 published: 2025-07-16
 description: '本教程将指导您如何为您的 Fuwari 博客集成一个能够根据网站主题自动切换亮色/暗色模式的 Giscus 评论区。通过创建一个自定义的 Astro 组件，您可以轻松实现评论区与网站外观的无缝融合。'
@@ -9,7 +9,7 @@ draft: false
 lang: ''
 ---
 
-# 配置github仓库
+## 配置github仓库
 
 新建一个公开仓库，在设置将Discussions开启，我们的评论将存储在这里
 
@@ -17,7 +17,7 @@ lang: ''
 
 在你的仓库安装 [giscus](https://github.com/apps/giscus)![giscus](https://r2.xmfu.cn/2025/07/f833ef6027b8bebe00cd0c6749710ab6.png)
 
-# 配置你的网站
+## 配置你的网站
 
 打开[giscus官网](https://giscus.app/)
 
@@ -27,7 +27,7 @@ lang: ''
 
 你可以在网站任意部分插入这个脚本即可使用
 
-# fuwari的主题自适应
+## fuwari的主题自适应
 
 在\src\components\下创建一个astro组件，爱叫啥叫啥
 

@@ -1,7 +1,7 @@
 ---
 title: 序
 published: 2025-07-17
-description: '随手写的小说'
+description: '孚狸随笔微文第一篇《序》：记录一些零散的灵感碎片与随笔构思，探索文字、空间与想象的虚实边界。'
 image: ''
 tags: []
 category: '小说'

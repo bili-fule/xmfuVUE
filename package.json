@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite-ssg build",
     "build:check": "vue-tsc -b && vite-ssg build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "submit:indexnow": "node scripts/submit-indexnow.js"
   },
   "dependencies": {
     "@lucide/vue": "^1.31.0",
