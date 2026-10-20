@@ -13,7 +13,7 @@ export default async function onRequest({request}){
  try{
   let body
   if(request.method==='POST'){if(!(request.headers.get('content-type')??'').startsWith('application/json'))return response(415,'需要 JSON 请求');body=await request.arrayBuffer();if(body.byteLength>4096)return response(413,'请求过长')}
-  const result=await fetch(ORIGIN+url.pathname+url.search,{method:request.method,headers,body,redirect:'error',signal:AbortSignal.timeout(20000)})
+  const result=await fetch(ORIGIN+url.pathname+url.search,{method:request.method,headers,body,redirect:'error'})
   const outgoing=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store, private','x-content-type-options':'nosniff','referrer-policy':'no-referrer'})
   const cookieHeader=result.headers.get('set-cookie');if(cookieHeader)outgoing.set('set-cookie',cookieHeader)
   return new Response(result.body,{status:result.status,headers:outgoing})
