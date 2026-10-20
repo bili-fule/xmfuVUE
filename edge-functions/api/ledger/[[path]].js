@@ -17,5 +17,5 @@ export default async function onRequest({request}){
   const outgoing=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store, private','x-content-type-options':'nosniff','referrer-policy':'no-referrer'})
   const cookieHeader=result.headers.get('set-cookie');if(cookieHeader)outgoing.set('set-cookie',cookieHeader)
   return new Response(result.body,{status:result.status,headers:outgoing})
- }catch{return response(502,'账本暂时无法连接，请稍后再试')}
+ }catch(error){return new Response(JSON.stringify({error:'账本暂时无法连接，请稍后再试',diagnostic:String(error?.message??error).slice(0,240)}),{status:502,headers:{'content-type':'application/json','cache-control':'no-store'}})}
 }
