@@ -15,3 +15,5 @@
 `npm run build:check` 检查类型和完整 SSG 构建；`node --test scripts/ledger-proxy.test.mjs` 验证固定源站、Cookie 白名单、无管理权限转发及跨站写请求拒绝。上线还需验证匿名明细 401、登录后的明细、退出后拒绝访问以及无缓存。
 
 EdgeOne 文件路由与处理函数参考：https://pages.edgeone.ai/document/edge-functions 。
+
+EdgeOne 运行时不提供 AbortSignal.timeout，代理不依赖此接口；20 秒后端超时由独立 HTTPS 网关执行。回归测试包含该方法缺失的环境。

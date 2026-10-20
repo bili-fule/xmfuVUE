@@ -13,3 +13,11 @@ test('website ledger proxy has a fixed HTTPS origin and forwards only its own au
   assert.equal(calls.length,1)
  }finally{globalThis.fetch=old}
 })
+
+
+test('website proxy works in EdgeOne without AbortSignal.timeout',async()=>{
+ const old=globalThis.fetch,descriptor=Object.getOwnPropertyDescriptor(AbortSignal,'timeout')
+ globalThis.fetch=async()=>new Response('{"published":true}')
+ Object.defineProperty(AbortSignal,'timeout',{value:undefined,configurable:true})
+ try{const response=await onRequest({request:new Request('https://www.xmfu.cn/api/ledger/public')});assert.equal(response.status,200)}finally{globalThis.fetch=old;Object.defineProperty(AbortSignal,'timeout',descriptor)}
+})
