@@ -2,7 +2,7 @@
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
-import { Moon, Sun, Home, Users, User, Search, Menu, X, Sparkles } from 'lucide-vue-next'
+import { Moon, Sun, Home, Users, User, Search, Menu, X, Sparkles, Wallet } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import SearchModal from '@/components/SearchModal.vue'
 import { siteConfig } from '@/data/site'
@@ -18,6 +18,7 @@ const searchShortcut = ref('Ctrl K')
 const navItems = computed(() => [
   { name: t('nav.home') || '首页', path: '/', icon: Home },
   { name: t('nav.friends') || '友链', path: '/friends', icon: Users },
+  { name: locale.value==='zh'?'账本':'Ledger', path: '/ledger', icon: Wallet },
   { name: t('nav.about') || '关于', path: '/about', icon: User },
 ])
 

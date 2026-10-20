@@ -27,6 +27,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AboutView.vue'),
   },
   {
+    path: '/ledger',
+    name: 'ledger',
+    component: () => import('@/views/LedgerView.vue'),
+  },
+  {
     path: '/beta',
     name: 'beta',
     component: () => import('@/views/BetaView.vue'),

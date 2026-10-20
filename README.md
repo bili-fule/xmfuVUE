@@ -85,3 +85,7 @@ dev server 会自动热更新，构建时自动生成搜索索引、RSS、sitema
 ## 许可
 
 文章内容采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可。
+
+## 生活账本
+
+`/ledger` 展示准确月度汇总，主人登录后查看交易明细。SQLite 数据位于独立微信私人助理，EdgeOne 函数仅代理限定账本接口。[数据链路与验证](docs/ledger.md)。

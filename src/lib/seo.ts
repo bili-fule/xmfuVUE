@@ -27,6 +27,11 @@ const STATIC_PAGE_SEO: Record<string, { title: string; description: string; noin
     title: `友情链接 - fulieblog 博客朋友圈与友链申请`,
     description: `孚狸博客的友情链接专页，汇集优秀的独立开发者与技术博客创作者，欢迎互换友链共同交流成长。`,
   },
+  '/ledger': {
+    title: '生活账本 - 孚狸的月度收入支出汇总',
+    description: '记录生活中的收入与支出，公开准确的月度收支汇总；具体交易、支付账户与商品明细仅在主人登录后展示。',
+    noindex: true,
+  },
   '/beta': {
     title: `Beta 实验室 - fulieblog 视觉交互体验预览`,
     description: `博客前沿功能与视觉交互改进对比中心，用于实验性架构与设计的预览评估。`,
