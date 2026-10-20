@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button'
 import SiteFooter from '@/components/SiteFooter.vue'
 
 interface Month { month: string; income: number; expense: number; balance: number; refund?: number; transfer?: number; netExpense?: number }
-interface Entry { id: number; day: string; kind: string; amount_cents: number; counterparty: string; description: string; account: string; category: string; status: string; voided: number }
+interface Category {month:string;kind:string;category:string;cents:number}
+interface Entry { id: number; day: string; kind: string; amount_cents: number; counterparty: string; description: string; account: string; category: string; status: string; voided: number; confidence?:number; classification_reason?:string }
 const authenticated=ref(false),loginOpen=ref(false),password=ref(''),busy=ref(false),notice=ref(''),month=ref(''),months=ref<Month[]>([]),entries=ref<Entry[]>([]),after=ref(0),more=ref(false)
+const categories=ref<Category[]>([]),pending=ref(0)
+const categoryTotals=computed(()=>{const grouped=new Map<string,Category>();for(const r of categories.value){const key=r.kind+':'+r.category,previous=grouped.get(key);if(previous)previous.cents+=r.cents;else grouped.set(key,{...r})}return [...grouped.values()].sort((a,b)=>b.cents-a.cents)})
 let epoch=0
 const money=(n:number)=>new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY'}).format(n/100)
 const expense=(m:Month)=>m.netExpense??m.expense
@@ -17,7 +20,7 @@ const names:Record<string,string>={income:'收入',expense:'支出',refund:'退�
 async function api(path:string,options:RequestInit={}){
  const response=await fetch('/api/ledger/'+path,{...options,credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json',...options.headers}})
  const data=await response.json()
- if(!response.ok){if(response.status===401&&path.startsWith('details')){authenticated.value=false;entries.value=[];months.value=[]}throw Error(data.error??'暂时无法连接账本')}
+ if(!response.ok){if(response.status===401&&path.startsWith('details')){authenticated.value=false;entries.value=[];categories.value=[];pending.value=0;months.value=[]}throw Error(data.error??'暂时无法连接账本')}
  return data
 }
 async function load(append=false){
@@ -27,10 +30,10 @@ async function load(append=false){
    const query=new URLSearchParams({after:String(append?after.value:0)});if(month.value)query.set('month',month.value)
    const data=await api('details?'+query)
    if(version!==epoch||!authenticated.value)return
-   months.value=data.months;entries.value=append?[...entries.value,...data.entries]:data.entries;after.value=data.nextAfter;more.value=data.entries.length===50
+   categories.value=data.categories??[];pending.value=data.pending??0;months.value=data.months;entries.value=append?[...entries.value,...data.entries]:data.entries;after.value=data.nextAfter;more.value=data.entries.length===50
   }else{
    const data=await api('public');if(version!==epoch)return
-   months.value=data.months;entries.value=[];more.value=false
+   categories.value=data.categories??[];pending.value=data.pending??0;months.value=data.months;entries.value=[];more.value=false
    if(!data.published)notice.value='账本暂未公开'
   }
  }catch(e){if(version===epoch)notice.value=e instanceof Error?e.message:'读取失败'}finally{if(version===epoch)busy.value=false}
@@ -40,18 +43,18 @@ async function login(){
  try{await api('login',{method:'POST',body:JSON.stringify({password:password.value})});password.value='';authenticated.value=true;loginOpen.value=false;await load()}catch(e){notice.value=e instanceof Error?e.message:'登录失败';busy.value=false}
 }
 async function logout(){
- epoch++;authenticated.value=false;entries.value=[];months.value=[];month.value='';password.value='';busy.value=true
+ epoch++;authenticated.value=false;entries.value=[];categories.value=[];pending.value=0;months.value=[];month.value='';password.value='';busy.value=true
  try{await api('logout',{method:'POST',body:'{}'});await load()}catch(e){notice.value=e instanceof Error?e.message:'退出失败';busy.value=false}
 }
 onMounted(async()=>{try{authenticated.value=(await api('session')).authenticated}catch{}await load()})
-onUnmounted(()=>{epoch++;entries.value=[];months.value=[];password.value=''})
+onUnmounted(()=>{epoch++;entries.value=[];categories.value=[];pending.value=0;months.value=[];password.value=''})
 </script>
 
 <template>
  <div class="min-h-full min-w-0 sm:h-full sm:overflow-y-auto">
   <div class="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12 space-y-7">
    <header class="flex flex-wrap items-start justify-between gap-5">
-    <div><p class="text-xs uppercase tracking-[.22em] text-muted-foreground mb-3">A little record of life</p><h1 class="flex items-center gap-3 text-3xl font-bold tracking-tight"><Wallet class="size-7 text-primary"/>生活账本</h1><p class="mt-3 text-sm leading-6 text-muted-foreground">{{ authenticated?'你已登录，可以查看准确汇总和每笔交易':'分享准确的月度收支，具体账目留给自己' }}</p></div>
+    <div><p class="text-xs uppercase tracking-[.22em] text-muted-foreground mb-3">A little record of life</p><h1 class="flex items-center gap-3 text-3xl font-bold tracking-tight"><Wallet class="size-7 text-primary"/>生活账本</h1><p class="mt-3 text-sm leading-6 text-muted-foreground">{{ authenticated?'你已登录，可以查看准确汇总和每笔交易':'分享按类别汇总的收支，具体账目留给自己' }}</p></div>
     <Button v-if="!authenticated" variant="outline" class="gap-2" @click="loginOpen=!loginOpen"><LockKeyhole class="size-4"/>主人登录</Button>
     <Button v-else variant="outline" class="gap-2" @click="logout"><LogOut class="size-4"/>退出登录</Button>
    </header>
@@ -68,6 +71,11 @@ onUnmounted(()=>{epoch++;entries.value=[];months.value=[];password.value=''})
      <article class="rounded-xl border bg-card p-5"><p class="text-sm text-muted-foreground">收支结余</p><p class="mt-3 text-2xl font-semibold tabular-nums">{{ money(totals.balance) }}</p></article>
     </div>
     <p class="text-xs leading-6 text-muted-foreground">范围：{{ months[0]?.month }} 至 {{ months[months.length-1]?.month }} · 仅覆盖已导入及记录的数据，收支结余不是账户余额。退款按入账月抵支出，充值、提现不算收入或消费。</p>
+    <section class="rounded-xl border bg-card p-5 space-y-4" aria-label="分类收支">
+     <div class="flex flex-wrap justify-between gap-2"><h2 class="font-semibold">钱花在哪 · 收入从哪来</h2><span v-if="authenticated" class="text-xs text-muted-foreground">{{ pending }} 笔待确认，分类由私人助理整理</span></div>
+     <div class="grid gap-6 sm:grid-cols-2"><div v-for="kind in ['expense','income']" :key="kind" class="space-y-3"><h3 class="text-sm text-muted-foreground">{{ kind==='expense'?'支出分类（已抵退款）':'收入分类' }}</h3><div v-for="c in categoryTotals.filter(c=>c.kind===kind)" :key="c.category" class="flex items-center justify-between gap-3 text-sm"><span :class="c.category==='待确认'?'text-amber-700 dark:text-amber-300':''">{{ c.category }}</span><strong class="font-medium tabular-nums">{{ money(c.cents) }}</strong></div></div></div>
+     <p class="text-xs text-muted-foreground">依据不足的账目保留待确认；退款核实后归入原支出类别，账户划转不计收支。</p>
+    </section>
     <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="月度收支">
      <article v-for="m in ordered" :key="m.month" class="rounded-xl border bg-card p-5 space-y-4">
       <h2 class="font-semibold">{{ m.month.replace('-',' 年 ') }} 月</h2>
@@ -83,7 +91,7 @@ onUnmounted(()=>{epoch++;entries.value=[];months.value=[];password.value=''})
    <section v-if="authenticated" class="space-y-4">
     <div class="flex items-center justify-between"><h2 class="text-xl font-semibold">交易明细</h2><span class="text-xs text-muted-foreground">仅自己可见</span></div>
     <div class="overflow-x-auto rounded-xl border bg-card"><table class="w-full text-left text-xs"><thead class="border-b text-muted-foreground"><tr><th class="whitespace-nowrap px-4 py-3 font-medium">日期 / 编号</th><th class="px-4 py-3 font-medium">类型</th><th class="px-4 py-3 font-medium">金额</th><th class="px-4 py-3 font-medium">对方 / 商品</th><th class="px-4 py-3 font-medium">账户 / 分类</th></tr></thead><tbody>
-     <tr v-for="e in entries" :key="e.id" class="border-b last:border-0" :class="e.voided?'opacity-50 line-through':''"><td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ e.day }}<span class="mt-1 block text-muted-foreground">#{{ e.id }}</span></td><td class="whitespace-nowrap px-4 py-3">{{ names[e.kind] }}</td><td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ money(e.amount_cents) }}</td><td class="min-w-48 max-w-sm break-words px-4 py-3">{{ e.counterparty||'—' }}<span class="mt-1 block text-muted-foreground">{{ e.description }}</span></td><td class="min-w-36 px-4 py-3">{{ e.account||'—' }}<span class="mt-1 block text-muted-foreground">{{ e.voided?'已作废':e.category+' · '+e.status }}</span></td></tr>
+     <tr v-for="e in entries" :key="e.id" class="border-b last:border-0" :class="e.voided?'opacity-50 line-through':''"><td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ e.day }}<span class="mt-1 block text-muted-foreground">#{{ e.id }}</span></td><td class="whitespace-nowrap px-4 py-3">{{ names[e.kind] }}</td><td class="whitespace-nowrap px-4 py-3 tabular-nums">{{ money(e.amount_cents) }}</td><td class="min-w-48 max-w-sm break-words px-4 py-3">{{ e.counterparty||'—' }}<span class="mt-1 block text-muted-foreground">{{ e.description }}</span></td><td class="min-w-36 px-4 py-3">{{ e.account||'—' }}<span class="mt-1 block text-muted-foreground">{{ e.voided?'已作废':e.category+' · '+e.status }}<span v-if="e.classification_reason" class="mt-1 block">{{ e.classification_reason }}<span v-if="e.confidence!=null"> · {{ Math.round(e.confidence*100) }}%</span></span></span></td></tr>
     </tbody></table></div>
     <Button v-if="more" variant="outline" :disabled="busy" @click="load(true)">继续查看</Button>
    </section>
